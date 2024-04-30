@@ -16,7 +16,8 @@ public abstract class AbstractMouse implements IMouse, IUpdatableDevice {
 	protected ArrayList<EnumMouseButtons> releasedButtons = new ArrayList<EnumMouseButtons>();
 
 	protected Vector2f cursorPosition;
-	protected Vector2f lockedCursorPosition;
+	protected Vector2f previousCursorPosition;
+	protected Vector2f cursorPositionDiff;
 	protected float scrollOffset;
 	protected boolean showCursor;
 	
@@ -57,12 +58,22 @@ public abstract class AbstractMouse implements IMouse, IUpdatableDevice {
 
 	@Override
 	public Vector2f getLockedCursorPosition() {
-		return lockedCursorPosition;
+		return previousCursorPosition;
 	}
 
 	@Override
+	public Vector2f getCursorPositionDiff() {
+		return cursorPositionDiff;
+	}
+
+	@Override
+	public void setCursorPositionDiff(Vector2f cursorPosition) {
+		this.cursorPositionDiff = cursorPosition;
+	}
+	
+	@Override
 	public void setLockedCursorPosition(Vector2f lockedCursorPosition) {
-		this.lockedCursorPosition = lockedCursorPosition;
+		this.previousCursorPosition = lockedCursorPosition;
 	}
 
 	@Override
