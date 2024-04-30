@@ -6,15 +6,7 @@ import static org.lwjgl.opengl.GL11.GL_UNSIGNED_INT;
 import static org.lwjgl.opengl.GL11.glClearColor;
 import static org.lwjgl.opengl.GL11.glDrawElements;
 import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL11.glDepthFunc;
-import static org.lwjgl.opengl.GL11.GL_ALWAYS;
-import static org.lwjgl.opengl.GL11.GL_NEVER;
-import static org.lwjgl.opengl.GL11.GL_LESS;
-import static org.lwjgl.opengl.GL11.GL_EQUAL;
-import static org.lwjgl.opengl.GL11.GL_LEQUAL;
-import static org.lwjgl.opengl.GL11.GL_GREATER;
-import static org.lwjgl.opengl.GL11.GL_NOTEQUAL;
-import static org.lwjgl.opengl.GL11.GL_GEQUAL;
+
 import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 import static org.lwjgl.opengl.GL13.glActiveTexture;
 import static org.lwjgl.opengl.GL13.GL_BLEND;
@@ -36,6 +28,8 @@ import com.xamlo.core.engine.graphics.api.primitives.IVertex;
 import com.xamlo.core.engine.graphics.components.attribs.PositionAttribute;
 import com.xamlo.core.engine.graphics.components.attribs.TexCoordAttribute;
 import com.xamlo.core.engine.graphics.components.gui.WidgetGeometry;
+import com.xamlo.core.engine.graphics.opengl.EnumOpenGLDepthMode;
+import com.xamlo.core.engine.graphics.opengl.OpenGLDepth;
 import com.xamlo.core.engine.graphics.primitives.Vertex;
 import com.xamlo.core.engine.graphics.primitives.VertexStructure;
 import com.xamlo.engine.api.resources.IShaderResource;
@@ -135,37 +129,14 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		
 
-		this.enableDepthTest();
 		
         glEnable(GL_BLEND);
         
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		
-        /**
-         * OpenGL позволяет переопределить оператор сравнения, используемый в тесте глубины, что дает нам тонкий контроль над тем, какие фрагменты стоит обработать, 
-         * какие отбросить и в каких случаях буфер глубины будет обновлен. Оператор устанавливается через вызов функции glDepthFunc:
-         * 
-         * Функция принимает идентификатор оператора сравнения из данного списка:
-         * 
-         * GL_ALWAYS - Фрагмент всегда проходит тест глубины.
-         * 
-         * GL_NEVER - Фрагмент никогда не проходит тест глубины.
-         * 
-         * GL_LESS - Фрагмент проходит тест, если его значение глубины меньше хранимого в буфере.
-         * 
-         * GL_EQUAL - Фрагмент проходит тест, если его значение глубины равно хранимому в буфере.
-         * 
-         * GL_LEQUAL - Фрагмент проходит тест, если его значение глубины меньше либо равно хранимому в буфере.
-         * 
-         * GL_GREATER - Фрагмент проходит тест, если его значение глубины больше хранимого в буфере.
-         * 
-         * GL_NOTEQUAL - Фрагмент проходит тест, если его значение глубины отличается от хранимого в буфере.
-         * 
-         * GL_GEQUAL - Фрагмент проходит тест, если его значение глубины больше либо равно хранимому в буфере.
-         * 
-         * По умолчанию используется GL_LESS.
-         */
-        glDepthFunc(GL_ALWAYS);
+		OpenGLDepth.enable();
+
+        OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
 
 		shaderProgram = new ShaderProgram();
 		shaderProgram.addVertexShader(vertexShaderSource.getShaderProgram());
@@ -385,34 +356,5 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		shaderProgram.cleanup();			
 	}
 
-
-	/**
-	  * Буфер глубины также, как и буфер цвета (хранящий цвета всех фрагментов – видимое изображение), хранит определенную информацию для каждого фрагмента и,  обычно, имеет 
-	  * размеры совпадающие с размерами буфера цвета. Буфер глубины создается автоматически оконной системой ОС и хранит значения в виде 16, 24 или 32 битных чисел с плавающей точкой. 
-	  * В большинстве систем по умолчанию создается буфер с точностью 24 бита.
-	  * 
-	  * При включенном тесте глубины OpenGL производит проверку глубины каждого обрабатываемого фрагмента относительно данных, хранимых в буфере. При прохождении 
-	  * теста содержимое буфера будет обновлено значением глубины обрабатываемого фрагмента, при провале теста – хранимое значение останется прежним, а фрагмент отбрасывается.
-	  * 
-	  * Тест глубины производится в экранном пространстве после выполнения фрагментного шейдера (и после теста трафарета). 
-	  * Экранные координаты непосредственно связаны с параметрами окна просмотра, заданными функцией glViewport, и доступны через встроенную переменную GLSL gl_FragCoord в коде фрагментного шейдера. 
-	  * Компоненты x и y данной переменной представляют собой координаты фрагмента в окне просмотра (левый нижний угол окна имеет координаты (0, 0)). У gl_FragCoord также есть и 
-	  * третья компонента, которая собственно и содержит значение глубины фрагмента. Эта z-компонента используется для сравнения со значениями из буфера глубины.
-	  * 
-	  * Современные GPU практически все используют трюк, называемый ранним тестом глубины. 
-	  * Эта техника позволяет выполнить тест глубины до выполнения фрагментного шейдера. Если нам становится известно, что данный фрагмент никак не может быть виден (перекрыт другими объектами), 
-	  * то мы можем отбросить его до этапа шейдинга. 
-	  * Фрагментные шейдеры довольно вычислительно тяжелы, потому стоит избегать их выполнения там, где это бессмысленно. У данной техники есть только одно ограничение: 
-	  * фрагментный шейдер не должен изменять значение глубины фрагмента. Это очевидно, ведь OpenGL в таком случае не сможет наперед определить значение глубины обрабатываемого фрагмента.
-	  * 
-	  * Включение теста глубины также требует очистки буфера от старых значений в каждом кадре. В функцию glClear добавляется новый флаг GL_DEPTH_BUFFER_BIT
-	  * 
-	  * glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  
-	  */
-	private void enableDepthTest() {
-		
-		glEnable(GL_DEPTH_TEST);	
-		
-	}
 	
 }
