@@ -9,7 +9,9 @@ import static org.lwjgl.opengl.GL11.GL_CW;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
 import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
+import static org.lwjgl.opengl.GL11.GL_ALWAYS;
 import static org.lwjgl.opengl.GL11.glClear;
+import static org.lwjgl.opengl.GL11.glDepthFunc;
 import static org.lwjgl.opengl.GL11.glCullFace;
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL11.glFrontFace;
@@ -104,6 +106,7 @@ public class RenderEngine implements IRenderEngine {
            	    camera.getFarDistance()
         );
         projectionMatrix = projectionMatrix.mul(camera.getViewMatrix());
+
 	}
 	
 	@Override
@@ -120,16 +123,13 @@ public class RenderEngine implements IRenderEngine {
 		glFrontFace(GL_CW);				
 //		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
-		//Настройка OpenGL для того,
-		//чтобы она не рисовала обратную сторону 
-		//модели, которую мы не видим
+		//Настройка OpenGL для того, чтобы она не рисовала обратную сторону модели, которую мы не видим
 		glEnable(GL_DEPTH_TEST);
-		//Настройка OpenGL для того,
-		//чтобы она могла работать с текстурами
+		//Настройка OpenGL для того, чтобы она могла работать с текстурами
 		//Но, если верить туториалам
-		//эта настройка не обязательна, если мы рендерим
-		//с помощью шейдеров glsl
+		//эта настройка не обязательна, если мы рендерим с помощью шейдеров glsl
 		glEnable(GL_TEXTURE_2D);
+		
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		
 		getDeviceProperties();
@@ -236,6 +236,7 @@ public class RenderEngine implements IRenderEngine {
         // Set the clear color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
+        //Я думаю это не нужно в каждом цикле
         glViewport(0, 0, window.getWidth(), window.getHeight());
 
 
