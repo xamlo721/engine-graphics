@@ -1,6 +1,5 @@
 package com.xamlo.core.engine.graphics.components;
 
-import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
 import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
 import static org.lwjgl.opengl.GL11.GL_UNSIGNED_INT;
 import static org.lwjgl.opengl.GL11.glClearColor;
@@ -9,10 +8,7 @@ import static org.lwjgl.opengl.GL11.glEnable;
 
 import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 import static org.lwjgl.opengl.GL13.glActiveTexture;
-import static org.lwjgl.opengl.GL13.GL_BLEND;
-import static org.lwjgl.opengl.GL13.GL_SRC_ALPHA;
-import static org.lwjgl.opengl.GL13.GL_ONE_MINUS_SRC_ALPHA;
-import static org.lwjgl.opengl.GL13.glBlendFunc;
+
 import static org.lwjgl.opengl.GL13.GL_FRONT_AND_BACK;
 import static org.lwjgl.opengl.GL13.GL_LINE;
 import static org.lwjgl.opengl.GL13.glPolygonMode;
@@ -29,6 +25,8 @@ import com.xamlo.core.engine.graphics.components.attribs.PositionAttribute;
 import com.xamlo.core.engine.graphics.components.attribs.TexCoordAttribute;
 import com.xamlo.core.engine.graphics.components.gui.WidgetGeometry;
 import com.xamlo.core.engine.graphics.opengl.EnumOpenGLDepthMode;
+import com.xamlo.core.engine.graphics.opengl.EnumOpenglBlendMode;
+import com.xamlo.core.engine.graphics.opengl.OpenGLBlend;
 import com.xamlo.core.engine.graphics.opengl.OpenGLDepth;
 import com.xamlo.core.engine.graphics.primitives.Vertex;
 import com.xamlo.core.engine.graphics.primitives.VertexStructure;
@@ -128,14 +126,11 @@ public class DefaultSceneRenderer implements ISceneRenderer {
         //Рисовать рамку или заливать цветом - закомментировать, если хотим цвет
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		
-
-		
-        glEnable(GL_BLEND);
+		OpenGLBlend.enable();
+		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);
         
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		
 		OpenGLDepth.enable();
-
         OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
 
 		shaderProgram = new ShaderProgram();

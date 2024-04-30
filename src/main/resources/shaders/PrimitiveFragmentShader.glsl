@@ -11,6 +11,13 @@ uniform sampler2D texture_sampler;
 void main() {
 
 //	color = vec4(inputColor, 1.0f);
-    fragColor = texture(texture_sampler, outTexCoord);
+	vec4 texColor = texture(texture_sampler, outTexCoord);
 
+	//Штука для смешивания
+	//проверяем значение альфа-компоненты текстурного элемента и, если он меньше некого порога, отбрасываем его
+    if(texColor.a < 0.01) {
+        discard;
+    }
+
+    fragColor = texColor;
 }
