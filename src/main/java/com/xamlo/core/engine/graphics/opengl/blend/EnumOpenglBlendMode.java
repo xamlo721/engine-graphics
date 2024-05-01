@@ -1,4 +1,4 @@
-package com.xamlo.core.engine.graphics.opengl;
+package com.xamlo.core.engine.graphics.opengl.blend;
 
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL21;

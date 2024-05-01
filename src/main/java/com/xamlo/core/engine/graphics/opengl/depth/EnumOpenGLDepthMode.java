@@ -1,4 +1,4 @@
-package com.xamlo.core.engine.graphics.opengl;
+package com.xamlo.core.engine.graphics.opengl.depth;
 
 import org.lwjgl.opengl.GL11;
 

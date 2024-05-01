@@ -3,18 +3,11 @@ package com.xamlo.core.engine.graphics;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFW.glfwSetErrorCallback;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
-import static org.lwjgl.opengl.GL11.GL_BACK;
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_CW;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
 import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
-import static org.lwjgl.opengl.GL11.GL_ALWAYS;
 import static org.lwjgl.opengl.GL11.glClear;
-import static org.lwjgl.opengl.GL11.glDepthFunc;
-import static org.lwjgl.opengl.GL11.glCullFace;
 import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL11.glFrontFace;
 import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_SRGB;
 
 import org.joml.Matrix4f;
@@ -39,6 +32,9 @@ import com.xamlo.core.engine.graphics.devices.AbstractWindow;
 import com.xamlo.core.engine.graphics.devices.LJWGLKeyboard;
 import com.xamlo.core.engine.graphics.devices.LJWGLMouse;
 import com.xamlo.core.engine.graphics.devices.LJWGLWindow;
+import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullMode;
+import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullOrder;
+import com.xamlo.core.engine.graphics.opengl.cull.OpenGlCull;
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 
 public class RenderEngine implements IRenderEngine {
@@ -120,14 +116,12 @@ public class RenderEngine implements IRenderEngine {
 //		image.set(32, 32, bufferedImage);
 //		window.setWindowIcon(image);
 				
-		glFrontFace(GL_CW);				
-//		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		//Настройка OpenGL для того, чтобы она не рисовала обратную сторону модели, которую мы не видим
-		glEnable(GL_DEPTH_TEST);
+		OpenGlCull.enable();
+		OpenGlCull.setCullOrder(EnumOpenGLCullOrder.CCW);
+		OpenGlCull.setCullMode(EnumOpenGLCullMode.BACK);
+		
 		//Настройка OpenGL для того, чтобы она могла работать с текстурами
-		//Но, если верить туториалам
-		//эта настройка не обязательна, если мы рендерим с помощью шейдеров glsl
+		//Но, если верить туториалам эта настройка не обязательна, если мы рендерим с помощью шейдеров glsl
 		glEnable(GL_TEXTURE_2D);
 		
 		glEnable(GL_FRAMEBUFFER_SRGB);
