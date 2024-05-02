@@ -177,50 +177,21 @@ public class RenderEngine implements IRenderEngine {
 
 	@Override
 	public void updateInputDevices() {
-        
-		if(keyboard.isKeyHold(EnumKeyboardButtons.KEY_W)) {
-			camera.move( new Vector3f(0.0f, 0.0f, -movAmt));
 
-		}
-		if(keyboard.isKeyHold(EnumKeyboardButtons.KEY_S)) {
-			camera.move( new Vector3f(0.0f, 0.0f, movAmt));
-		}
-		if(keyboard.isKeyHold(EnumKeyboardButtons.KEY_A)) {
-			camera.move( new Vector3f(-movAmt, 0.0f, 0.0f));
-
-		}
-		if(keyboard.isKeyHold(EnumKeyboardButtons.KEY_D)) {
-			camera.move( new Vector3f(movAmt, 0.0f, 0.0f));
+		for (EnumKeyboardButtons holdButton : keyboard.getKeysHolding()) {
+			EventManager.call(new KeyboardClickEvent(holdButton));
 		}
 		
-		if(keyboard.isKeyHold(EnumKeyboardButtons.KEY_SPACE)) {
-			camera.move( new Vector3f(0.0f, movAmt, 0.0f));
-
+		if (mouse.getCursorPositionDiff().x != 0 &&  mouse.getCursorPositionDiff().y != 0) {
+			float dy = mouse.getCursorPositionDiff().x;
+			float dx = mouse.getCursorPositionDiff().y;
+			EventManager.call(new MouseHoverEvent(mouse.getCursorPosition().x, mouse.getCursorPosition().y, dx, dy));
 		}
-		if(keyboard.isKeyHold(EnumKeyboardButtons.KEY_LEFT_SHIFT)) {
-			camera.move( new Vector3f(0.0f, -movAmt, 0.0f));
-		}
-		
-		if(keyboard.isKeyHold(EnumKeyboardButtons.KEY_Q)) {
-			camera.rotate(new Vector3f(0.0f, 0.0f, movAmt));
 
+		for (EnumMouseButtons holdButton : mouse.getButtonsHolding()) {
+			EventManager.call(new MouseClickEvent(mouse.getCursorPosition().x, mouse.getCursorPosition().y, holdButton));
 		}
-		if(keyboard.isKeyHold(EnumKeyboardButtons.KEY_E)) {
-			camera.rotate(new Vector3f(0.0f, 0.0f, -movAmt));
-		}
-		
-		// free mouse rotation
-		if(mouse.isShowCursor() && mouse.getLockedCursorPosition()!=null) {
-			float dy = mouse.getLockedCursorPosition().y() - mouse.getCursorPosition().y();
-			float dx = mouse.getLockedCursorPosition().x() - mouse.getCursorPosition().x();
 
-			camera.rotate(new Vector3f(dy * movAmt, dx * movAmt, 0.0f));
-
-			glfwSetCursorPos(LJWGLWindow.getInstance().getWindow(),
-					mouse.getLockedCursorPosition().x(),
-					mouse.getLockedCursorPosition().y());
-			
-		}		
 		window.update();
 		keyboard.update();
 		mouse.update();
@@ -247,8 +218,6 @@ public class RenderEngine implements IRenderEngine {
 
 		// draw into OpenGL window
 		this.window.swapBuffers();
-		
-		
 
 	}
 

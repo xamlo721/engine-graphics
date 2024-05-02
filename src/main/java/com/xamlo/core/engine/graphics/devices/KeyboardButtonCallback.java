@@ -20,17 +20,15 @@ public class KeyboardButtonCallback extends GLFWKeyCallback {
     @Override
     public void invoke(long window, int keyCode, int scancode, int action, int mods) {
     	
-    	EnumKeyboardButtons key = converteKeyboardCode(keyCode);
+    	EnumKeyboardButtons button = converteKeyboardCode(keyCode);
+    	
     	if (action == GLFW_PRESS){
-    		if (!keyboard.pushedKeys.contains(key)){
-    			keyboard.pushedKeys.add(key);
-    			keyboard.keysHolding.add(key);
-    		}
+            keyboard.getPushedKeys().add(button);
+            
         }
     	
         if (action == GLFW_RELEASE) {
-        	keyboard.keysHolding.remove(key);
-        	keyboard.releasedKeys.add(key);
+            keyboard.getReleasedKeys().add(button);
         }
 
     }
