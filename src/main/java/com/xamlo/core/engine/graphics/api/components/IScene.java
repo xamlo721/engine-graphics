@@ -5,7 +5,7 @@ import java.util.List;
 import org.joml.Matrix4f;
 
 import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
-import com.xamlo.core.engine.graphics.api.gui.IWidget;
+import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 
 /*
  * Интерфейс, описывающий правила в заимодействия с понятием "Сцена"
@@ -22,7 +22,9 @@ public interface IScene {
 
 	List<AbstractSceneElement> getRenderableObject();
 	
-	List<IWidget> getGuiElements();
+	public IUIElement findElementAt(float xCoord, float yCoord);
+
+	List<IUIElement> getGuiElements();
 	
 	//TODO: Есть мнение, что сцена это совокупность объектов, которую могут рисовать
 	// всякие Renderer, они и определяют её положение в мире, а она сама не знает где она расположена
@@ -32,6 +34,5 @@ public interface IScene {
 	void tranformScene(Matrix4f transformMatrix);
 	
 	void unload();
-	
 	
 }

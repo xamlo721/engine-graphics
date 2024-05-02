@@ -8,13 +8,10 @@ import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
 import static org.lwjgl.opengl.GL11.glClear;
 import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_SRGB;
 
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 import static org.lwjgl.opengl.GL11.glViewport;
-import static org.lwjgl.glfw.GLFW.*;
 
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL11;
@@ -25,6 +22,7 @@ import org.lwjgl.opengl.GL43;
 import com.xamlo.core.engine.graphics.api.components.ICamera;
 import com.xamlo.core.engine.graphics.api.components.IRenderEngine;
 import com.xamlo.core.engine.graphics.api.components.IScene;
+import com.xamlo.core.engine.graphics.api.components.ISceneController;
 import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
 import com.xamlo.core.engine.graphics.devices.AbstractKeyboard;
 import com.xamlo.core.engine.graphics.devices.AbstractMouse;
@@ -36,6 +34,12 @@ import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullMode;
 import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullOrder;
 import com.xamlo.core.engine.graphics.opengl.cull.OpenGlCull;
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
+import com.xamlo.engine.api.devices.EnumMouseButtons;
+import com.xamlo.engine.device.events.KeyboardClickEvent;
+import com.xamlo.engine.device.events.MouseClickEvent;
+import com.xamlo.engine.device.events.MouseHoverEvent;
+
+import net.lenni0451.asmevents.EventManager;
 
 public class RenderEngine implements IRenderEngine {
 	
@@ -43,12 +47,11 @@ public class RenderEngine implements IRenderEngine {
 	private GLFWErrorCallback errorCallback;
 	
 	private IScene scene;
-	private final ISceneRenderer renderer;
+	private ISceneRenderer renderer;
+	private ISceneController sceneController;
 	
 	private boolean isRendering;
 	private boolean isCloseRequest;
-
-	private static final float movAmt = 0.11f;
 
 	private ICamera camera;
     private Matrix4f projectionMatrix;
@@ -56,7 +59,6 @@ public class RenderEngine implements IRenderEngine {
 	private AbstractWindow window;
     private AbstractKeyboard keyboard;
     private AbstractMouse mouse;
-
 	
 	public RenderEngine(ISceneRenderer renderer) {
 		this.isCloseRequest = false;
@@ -67,15 +69,18 @@ public class RenderEngine implements IRenderEngine {
 		this.camera = cam;
 	}
 	
-	public void setScene(IScene scene) {
+	public void setScene(IScene scene, ISceneController controller) {
 		this.scene = scene;
+		this.sceneController = controller;
+
+		sceneController.setCamera(camera);
+		sceneController.setScene(scene);
 	}
 	
 	@Override
 	public boolean isRendering() {
 		return this.isRendering && !this.window.isCloseRequested();
 	}
-	
 
 	@Override
 	public void init() {
@@ -89,7 +94,6 @@ public class RenderEngine implements IRenderEngine {
 
 		//Может вызываться перед инициализацией
 		glfwSetErrorCallback(errorCallback = GLFWErrorCallback.createPrint(System.err));
-
 
         //camera.setAspectRatio(480, 480);
         camera.setFov((float) Math.toRadians(60.0f));
@@ -129,8 +133,6 @@ public class RenderEngine implements IRenderEngine {
 		//glEnable(GL_FRAMEBUFFER_SRGB);
 		
 		getDeviceProperties();
-
-
 	}
 	
 	@Override
@@ -138,6 +140,8 @@ public class RenderEngine implements IRenderEngine {
 		keyboard = new LJWGLKeyboard();
 		mouse = new LJWGLMouse();
 
+		sceneController.setMouse(mouse);
+		sceneController.setKeyboard(keyboard);
 	}
 
 	@Override
@@ -151,12 +155,14 @@ public class RenderEngine implements IRenderEngine {
 		
 		isRendering = false;
 
-		
+
+		EventManager.unregister(KeyboardClickEvent.class, sceneController);
+		EventManager.unregister(MouseClickEvent.class, sceneController);
+		EventManager.unregister(MouseHoverEvent.class, sceneController);
 	}
 	@Override
 	public void loadScene() {
 	    this.scene.load();	
-		
 	}
 
 	@Override
@@ -226,7 +232,10 @@ public class RenderEngine implements IRenderEngine {
 		if(isRendering) {
 			return;
 		}
-		
+
+		EventManager.register(KeyboardClickEvent.class, sceneController);
+		EventManager.register(MouseClickEvent.class, sceneController);
+		EventManager.register(MouseHoverEvent.class, sceneController);
 	    this.isRendering = true;
 
 	    this.renderer.init();
@@ -235,9 +244,13 @@ public class RenderEngine implements IRenderEngine {
 
 	@Override
 	public void release() {
+		
 		scene.unload();
+		
 		window.close();
+		
 		glfwTerminate();
+		
 		this.isCloseRequest = true;		
 		
 	}
