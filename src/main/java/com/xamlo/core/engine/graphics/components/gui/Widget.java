@@ -5,14 +5,15 @@ import java.util.List;
 
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.IFont;
-import com.xamlo.core.engine.graphics.api.gui.IWidget;
+import com.xamlo.core.engine.graphics.api.gui.IUIElement;
+import com.xamlo.core.engine.graphics.api.gui.elements.IWidget;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 
 public class Widget implements IWidget {
 	
-	protected WidgetGeometry geometry;
-	protected IWidget parent;
-	protected List<IWidget> childWidgets;
+	protected UIElementGeometry geometry;
+	protected IUIElement parent;
+	protected List<IUIElement> childWidgets;
 	protected boolean visible;
 	protected boolean isEnable;
 	protected boolean focusable;
@@ -22,12 +23,15 @@ public class Widget implements IWidget {
 	protected String toolTipText;
 	protected Border border;
 	protected String widgetName;
+	protected int margin;
+	protected int padding;
+	protected EnumAlignment alignment;
 
 	public Widget() {
 		
-		this.geometry = new WidgetGeometry(0, 0, 0, 0);
+		this.geometry = new UIElementGeometry(0, 0, 0, 0);
 		this.parent = null;
-		this.childWidgets = new ArrayList<IWidget>();
+		this.childWidgets = new ArrayList<IUIElement>();
 		this.visible = true;
 		this.isEnable = true;
 		this.focusable = false;
@@ -38,12 +42,12 @@ public class Widget implements IWidget {
 		
 	}
 	
-	public Widget(Widget parent) {
+	public Widget(IWidget parent) {
 		this.parent = parent;
 		this.parent.addChild(this);
-		this.geometry = new WidgetGeometry(0, 0, 0, 0);
+		this.geometry = new UIElementGeometry(0, 0, 0, 0);
 		this.parent = null;
-		this.childWidgets = new ArrayList<IWidget>();
+		this.childWidgets = new ArrayList<IUIElement>();
 		this.visible = true;
 		this.isEnable = true;
 		this.focusable = false;
@@ -55,7 +59,7 @@ public class Widget implements IWidget {
 	}
 	
 	@Override
-	public void setParent(IWidget parent) {
+	public void setParent(IUIElement parent) {
 		this.parent = parent;
 		if (geometry != null) {
 			this.resize(this.geometry);
@@ -69,7 +73,7 @@ public class Widget implements IWidget {
 
 
 	@Override
-	public IWidget getParent() {
+	public IUIElement getParent() {
 		return this.parent;
 	}
 	
@@ -84,21 +88,21 @@ public class Widget implements IWidget {
 	}
 	
 	@Override
-	public WidgetGeometry getWidgetGeometry() {
+	public UIElementGeometry getGeometry() {
 		return geometry;
 	}
 
 	@Override
-	public WidgetSize getWidSize() {
+	public ElementSize getWidSize() {
 		return geometry;
 	}
 
 	@Override
-	public void resize(WidgetGeometry geometry) {
+	public void resize(UIElementGeometry geometry) {
 
 		if (hasParent()) {
-			geometry.xCoord += parent.getWidgetGeometry().xCoord;
-			geometry.yCoord += parent.getWidgetGeometry().yCoord;
+			geometry.xCoord += ((IWidget)parent).getGeometry().xCoord;
+			geometry.yCoord += ((IWidget)parent).getGeometry().yCoord;
 
 		}
 		
@@ -107,7 +111,7 @@ public class Widget implements IWidget {
 	}
 
 	@Override
-	public void resize(WidgetSize size) {
+	public void resize(ElementSize size) {
 
 		this.geometry.width = geometry.width;		
 		this.geometry.height = geometry.height;		
@@ -125,6 +129,7 @@ public class Widget implements IWidget {
 
 	@Override
 	public void setVisible(boolean visible) {
+		this.visible = visible;
 		if(visible) {
 			show();
 		} else {
@@ -133,13 +138,18 @@ public class Widget implements IWidget {
 	}
 
 	@Override
-	public void close() {
+	public boolean isVisible() {
+		return visible;
+	}
+
+	@Override
+	public void free() {
 		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
-	public void addChild(IWidget child) {
+	public void addChild(IUIElement child) {
 		this.childWidgets.add(child);
 		//if (!child.hasParent()) {
 			child.setParent(this);
@@ -151,7 +161,7 @@ public class Widget implements IWidget {
 	}
 	
 	@Override
-	public List<IWidget> getChildElements() {
+	public List<IUIElement> getChildElements() {
 		return this.childWidgets;
 	}
 
@@ -172,17 +182,23 @@ public class Widget implements IWidget {
 
 	@Override
 	public void setPosition(int x, int y) {
-		this.geometry = new WidgetGeometry(x, y, this.geometry.width, this.geometry.height);
+		this.geometry = new UIElementGeometry(x, y, this.geometry.width, this.geometry.height);
 	}
 
 	@Override
-	public void setEnabled(boolean enabled) {
-		this.isEnable = enabled;
-	}
-
-	@Override
-	public boolean isEnabled() {
-		return this.isEnable;
+	public boolean containsPoint(float x, float y) {
+		
+		boolean result = x >= geometry.getXCoord() && 
+		           x <= geometry.getXCoord() + geometry.getWidth() && 
+		           y >= geometry.getYCoord() && 
+		           y <= geometry.getYCoord() + geometry.getHeight();
+		
+//		           if (result) {
+//		        	   System.out.println("containsPoint with result " + result);
+//		        	   System.out.println(this.toString());
+//		           }
+		           
+        return result;
 	}
 
 	@Override
@@ -206,38 +222,43 @@ public class Widget implements IWidget {
 	}
 
 	@Override
-	public void setToolTipText(String tooltip) {
-		this.toolTipText = tooltip;
-	}
-
-	@Override
-	public String getToolTipText() {
-		return this.toolTipText;
-	}
-
-	@Override
-	public void setBorder(Border border) {
-		this.border = border;
-	}
-	
-	@Override
-	public void setBorder(int borderSize) {
-		this.border = new Border(borderSize, this.border.getColor());
-	}
-
-	@Override
-	public Border getBorder() {
-		return this.border;
-	}
-
-	@Override
-	public void setFocusable(boolean focusable) {
+	public void setFocused(boolean focusable) {
 		this.focusable = focusable;
 	}
 
 	@Override
-	public boolean isFocusable() {
+	public boolean isFocused() {
 		return this.focusable;
+	}
+
+	@Override
+	public void setAlignment(EnumAlignment alignment) {
+		this.alignment = alignment;
+	}
+
+	@Override
+	public EnumAlignment getAlignment() {
+		return this.alignment;
+	}
+
+	@Override
+	public void setPadding(int padding) {
+		this.padding = padding;
+	}
+
+	@Override
+	public int getPadding() {
+		return this.padding;
+	}
+
+	@Override
+	public void setMargin(int margin) {
+		this.margin = margin;
+	}
+
+	@Override
+	public int getMargin() {
+		return this.margin;
 	}
 
 }

@@ -1,6 +1,6 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
-public enum ButtonIconPosition {
+public enum EnumIconPosition {
 	
     LEFT, // Иконка слева от текста
     

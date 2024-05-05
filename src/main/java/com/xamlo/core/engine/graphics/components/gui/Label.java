@@ -2,7 +2,7 @@ package com.xamlo.core.engine.graphics.components.gui;
 
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.IFont;
-import com.xamlo.core.engine.graphics.api.gui.ILabel;
+import com.xamlo.core.engine.graphics.api.gui.elements.ILabel;
 
 
 public class Label extends Widget implements ILabel {

@@ -1,6 +1,6 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
-public enum ButtonAlignment {
+public enum EnumAlignment {
 	
     LEFT, // Выравнивание содержимого кнопки по левому краю
     

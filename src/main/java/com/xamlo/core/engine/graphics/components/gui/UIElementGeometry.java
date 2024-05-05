@@ -1,11 +1,11 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
-public class WidgetGeometry extends WidgetSize {
+public class UIElementGeometry extends ElementSize {
 
 	protected int xCoord;
 	protected int yCoord;
 	
-	public WidgetGeometry(int xCoord, int yCoord, int width, int height) {
+	public UIElementGeometry(int xCoord, int yCoord, int width, int height) {
 		super(width, height);
 		this.xCoord = xCoord;
 		this.yCoord = yCoord;
@@ -19,6 +19,10 @@ public class WidgetGeometry extends WidgetSize {
 		return this.yCoord;
 	}
 	
+	@Override
+	public String toString() {
+		return "[x: " + xCoord + "][y: " + yCoord + "]";
+	}
 
 	
 }

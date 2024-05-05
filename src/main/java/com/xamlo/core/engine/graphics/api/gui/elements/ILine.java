@@ -1,6 +1,8 @@
-package com.xamlo.core.engine.graphics.api.gui;
+package com.xamlo.core.engine.graphics.api.gui.elements;
 
 import org.joml.Vector2f;
+
+import com.xamlo.core.engine.graphics.api.gui.IColor;
 
 public interface ILine {
 	

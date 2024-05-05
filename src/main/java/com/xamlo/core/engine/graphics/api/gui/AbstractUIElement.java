@@ -135,7 +135,7 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 
 	@Override
 	public void loadMesh() {
-		// TODO Auto-generated method stub
+		uiGrapphicElement.loadMesh();
 		
 	}
 

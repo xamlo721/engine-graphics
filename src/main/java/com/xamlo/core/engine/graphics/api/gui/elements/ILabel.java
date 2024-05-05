@@ -1,4 +1,7 @@
-package com.xamlo.core.engine.graphics.api.gui;
+package com.xamlo.core.engine.graphics.api.gui.elements;
+
+import com.xamlo.core.engine.graphics.api.gui.IColor;
+import com.xamlo.core.engine.graphics.api.gui.IFont;
 
 public interface ILabel extends IWidget {
 

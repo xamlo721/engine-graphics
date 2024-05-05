@@ -3,7 +3,7 @@ package com.xamlo.core.engine.graphics.components.gui;
 import org.joml.Vector2f;
 
 import com.xamlo.core.engine.graphics.api.gui.IColor;
-import com.xamlo.core.engine.graphics.api.gui.ILine;
+import com.xamlo.core.engine.graphics.api.gui.elements.ILine;
 
 public class Line extends Widget implements ILine {
 

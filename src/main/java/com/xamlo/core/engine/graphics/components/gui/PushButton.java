@@ -1,8 +1,8 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
-import com.xamlo.core.engine.graphics.api.gui.ButtonClickListener;
+import com.xamlo.core.engine.graphics.api.gui.IClickListener;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
-import com.xamlo.core.engine.graphics.api.gui.IPushButton;
+import com.xamlo.core.engine.graphics.api.gui.elements.IPushButton;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 
 public class PushButton extends Label implements IPushButton {
@@ -15,9 +15,9 @@ public class PushButton extends Label implements IPushButton {
 	protected IColor buttonBorderColor;
 	protected int buttonCornerRadius;
     protected AbstractTexture buttonIcon;
-    protected ButtonIconPosition buttonIconPosition;
+    protected EnumIconPosition buttonIconPosition;
     protected int buttonIconSpacing;
-    protected ButtonAlignment buttonAlignment;
+    protected EnumAlignment buttonAlignment;
     protected int buttonPadding;
     protected int buttonMargin;
     protected boolean buttonEnabled;
@@ -25,10 +25,12 @@ public class PushButton extends Label implements IPushButton {
     protected boolean buttonPressed;
     protected boolean buttonHovered;
     protected boolean buttonFocused;
-    protected ButtonClickListener buttonClickListener;
-
+    protected IClickListener buttonClickListener;
+    
     public PushButton(String text) {
     	super(text);
+    	this.buttonVisible = true;
+    	this.buttonEnabled = true;
     }
     
     public PushButton() {
@@ -67,12 +69,12 @@ public class PushButton extends Label implements IPushButton {
     }
 
     @Override
-    public void setButtonHoverColor(IColor color) {
+    public void setHoverColor(IColor color) {
         this.buttonHoverColor = color;
     }
 
     @Override
-    public IColor getButtonHoverColor() {
+    public IColor getHoverColor() {
         return buttonHoverColor;
     }
 
@@ -87,163 +89,138 @@ public class PushButton extends Label implements IPushButton {
     }
 
     @Override
-    public void setButtonDisabledColor(IColor color) {
+    public void setDisabledColor(IColor color) {
         this.buttonDisabledColor = color;
     }
 
     @Override
-    public IColor getButtonDisabledColor() {
+    public IColor getDisabledColor() {
         return buttonDisabledColor;
     }
 
     @Override
-    public void setButtonBorderSize(int size) {
-        this.buttonBorderSize = size;
-    }
-
-    @Override
-    public int getButtonBorderSize() {
-        return buttonBorderSize;
-    }
-
-    @Override
-    public void setButtonBorderColor(IColor color) {
-        this.buttonBorderColor = color;
-    }
-
-    @Override
-    public IColor getButtonBorderColor() {
-        return buttonBorderColor;
-    }
-
-    @Override
-    public void setButtonCornerRadius(int radius) {
-        this.buttonCornerRadius = radius;
-    }
-
-    @Override
-    public int getButtonCornerRadius() {
-        return buttonCornerRadius;
-    }
-
-    @Override
-    public void setButtonIcon(AbstractTexture icon) {
+    public void setIcon(AbstractTexture icon) {
         this.buttonIcon = icon;
     }
 
     @Override
-    public AbstractTexture getButtonIcon() {
+    public AbstractTexture getIcon() {
         return buttonIcon;
     }
 
     @Override
-    public void setButtonIconPosition(ButtonIconPosition position) {
+    public void setIconPosition(EnumIconPosition position) {
         this.buttonIconPosition = position;
     }
 
     @Override
-    public ButtonIconPosition getButtonIconPosition() {
+    public EnumIconPosition getIconPosition() {
         return buttonIconPosition;
     }
 
     @Override
-    public void setButtonIconSpacing(int spacing) {
+    public void setIconSpacing(int spacing) {
         this.buttonIconSpacing = spacing;
     }
 
     @Override
-    public int getButtonIconSpacing() {
+    public int getIconSpacing() {
         return buttonIconSpacing;
     }
 
     @Override
-    public void setButtonAlignment(ButtonAlignment alignment) {
+    public void setAlignment(EnumAlignment alignment) {
         this.buttonAlignment = alignment;
     }
 
     @Override
-    public ButtonAlignment getButtonAlignment() {
+    public EnumAlignment getAlignment() {
         return buttonAlignment;
     }
 
     @Override
-    public void setButtonPadding(int padding) {
+    public void setPadding(int padding) {
         this.buttonPadding = padding;
     }
 
     @Override
-    public int getButtonPadding() {
+    public int getPadding() {
         return buttonPadding;
     }
 
     @Override
-    public void setButtonMargin(int margin) {
+    public void setMargin(int margin) {
         this.buttonMargin = margin;
     }
 
     @Override
-    public int getButtonMargin() {
+    public int getMargin() {
         return buttonMargin;
     }
 
     @Override
-    public void setButtonEnabled(boolean enabled) {
+    public void setEnabled(boolean enabled) {
         this.buttonEnabled = enabled;
     }
 
     @Override
-    public boolean isButtonEnabled() {
+    public boolean isEnabled() {
         return buttonEnabled;
     }
 
     @Override
-    public void setButtonVisible(boolean visible) {
+    public void setVisible(boolean visible) {
         this.buttonVisible = visible;
     }
 
     @Override
-    public boolean isButtonVisible() {
+    public boolean isVisible() {
         return buttonVisible;
     }
 
     @Override
-    public void setButtonPressed(boolean pressed) {
+    public void setPressed(boolean pressed) {
         this.buttonPressed = pressed;
     }
 
     @Override
-    public boolean isButtonPressed() {
+    public boolean isPressed() {
         return buttonPressed;
     }
 
     @Override
-    public void setButtonHovered(boolean hovered) {
+    public void setHovered(boolean hovered) {
         this.buttonHovered = hovered;
     }
 
     @Override
-    public boolean isButtonHovered() {
+    public boolean isHovered() {
         return buttonHovered;
     }
 
     @Override
-    public void setButtonFocused(boolean focused) {
+    public void setFocused(boolean focused) {
         this.buttonFocused = focused;
     }
 
     @Override
-    public boolean isButtonFocused() {
+    public boolean isFocused() {
         return buttonFocused;
     }
 
     @Override
-    public void setButtonClickListener(ButtonClickListener listener) {
+    public void setClickListener(IClickListener listener) {
         this.buttonClickListener = listener;
     }
 
     @Override
-    public ButtonClickListener getButtonClickListener() {
+    public IClickListener getClickListener() {
         return buttonClickListener;
     }
 
+
+    @Override
+    public String toString() {
+    	return "[" + this.widgetName + "]";
+    }
 }

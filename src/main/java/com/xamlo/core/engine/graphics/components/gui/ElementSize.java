@@ -1,11 +1,11 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
-public class WidgetSize {
+public class ElementSize {
 	
 	protected int width;
 	protected int height;
 	
-	public WidgetSize(int width, int height) {
+	public ElementSize(int width, int height) {
 		this.width = width;
 		this.height = height;
 	}
