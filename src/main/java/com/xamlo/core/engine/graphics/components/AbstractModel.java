@@ -1,12 +1,17 @@
 package com.xamlo.core.engine.graphics.components;
 
-import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
 import com.xamlo.engine.api.resources.IModelResource;
+import com.xamlo.engine.api.resources.IVertex;
+import com.xamlo.engine.api.resources.IVertexStructure;
 
-public abstract class AbstractModel extends AbstractSceneElement implements IModelResource<String> {
+public abstract class AbstractModel implements IModelResource<String> {
 
 	protected final String identifier;
-
+	protected IVertex[] vertices;
+	protected int[] indices;
+	protected int polygonCount;
+	protected IVertexStructure vertexScruct;
+	
 	protected AbstractModel(String identifier) {
 		this.identifier = identifier;
 	}
@@ -15,15 +20,25 @@ public abstract class AbstractModel extends AbstractSceneElement implements IMod
 	public String getIdentifier() {
 		return this.identifier;
 	}
-
+	
 	@Override
 	public int getPolygonCount() {
-		throw new UnsupportedOperationException("No implemented yet");
+		return polygonCount;
 	}
 
 	@Override
-	public void setPolygonCount(int count) {
-		throw new UnsupportedOperationException("No implemented yet");
+	public IVertex[] getVertices() {
+		return vertices;
+	}
+
+	@Override
+	public int[] getIndices() {
+		return indices;
+	}
+
+	@Override
+	public IVertexStructure getStructure() {
+		return this.vertexScruct;
 	}
 
 }

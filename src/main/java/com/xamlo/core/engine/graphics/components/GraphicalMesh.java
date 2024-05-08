@@ -4,13 +4,12 @@ import java.nio.FloatBuffer;
 
 import org.lwjgl.system.MemoryUtil;
 
-import com.xamlo.core.engine.graphics.api.primitives.IVertex;
-import com.xamlo.core.engine.graphics.api.primitives.IVertexStructure;
 import com.xamlo.core.engine.graphics.primitives.EnumMemoryType;
 import com.xamlo.core.engine.graphics.primitives.Vertex;
 import com.xamlo.core.engine.graphics.primitives.VertexArrayObject;
 import com.xamlo.core.engine.graphics.primitives.VertexBufferObject;
-import com.xamlo.core.engine.graphics.primitives.VertexStructure;
+import com.xamlo.engine.api.resources.IVertex;
+import com.xamlo.engine.api.resources.IVertexStructure;
 
 import ru.satomi.dc.primitive.PhysicalMesh;
 
@@ -52,7 +51,7 @@ public class GraphicalMesh extends PhysicalMesh {
     	this.vertexCount = indices.length;
     }
     
-    public GraphicalMesh(Vertex[] vertices, VertexStructure structure,  int[] indices, Texture texture) {
+    public GraphicalMesh(Vertex[] vertices, IVertexStructure structure,  int[] indices, Texture texture) {
     	this(vertices, structure, indices);
     	
     	//TODO: Перенести сюда работу с текстурами из AbstractRenderableObject
