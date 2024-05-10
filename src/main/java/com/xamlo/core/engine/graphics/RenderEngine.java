@@ -124,7 +124,9 @@ public class RenderEngine implements IRenderEngine {
 		//Но, если верить туториалам эта настройка не обязательна, если мы рендерим с помощью шейдеров glsl
 		glEnable(GL_TEXTURE_2D);
 		
-		glEnable(GL_FRAMEBUFFER_SRGB);
+		//TODO: Вынести гамма коррекцию в отдельный раздел
+		//Гамма корректция должна использоваться только для некоторых отдельных объектов или сцен
+		//glEnable(GL_FRAMEBUFFER_SRGB);
 		
 		getDeviceProperties();
 
