@@ -16,6 +16,7 @@ import static org.lwjgl.opengl.GL13.glPolygonMode;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
+import org.lwjgl.opengl.GL11;
 
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
@@ -44,8 +45,8 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 	private ShaderProgram shaderProgram;
 
 	public DefaultSceneRenderer(ResourceLoader<String> resourceLoader) {
-		this.vertexShaderSource = resourceLoader.loadShader("shader.primitive.vertex");
-		this.fragmentShaderSource = resourceLoader.loadShader("shader.primitive.fragment");
+		this.vertexShaderSource = resourceLoader.loadShader("shader.primitive.colored.vertex");
+		this.fragmentShaderSource = resourceLoader.loadShader("shader.primitive.colored.fragment");
 	}
 
 	static AbstractRenderableObject uiGrapphicElement = new AbstractRenderableObject() {
@@ -121,6 +122,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		}
 		
 	};
+	
 	@Override
 	public void init() {
         //Рисовать рамку или заливать цветом - закомментировать, если хотим цвет
@@ -140,7 +142,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		shaderProgram.bind();
 		try {
 			shaderProgram.createUniform("projectionMatrix");
-			//shaderProgram.createUniform("worldMatrix");
+			shaderProgram.createUniform("objectMatrix");
 			shaderProgram.createUniform("positionMatrix");
 			shaderProgram.createUniform("scaleMatrix");
 			shaderProgram.createUniform("rotationMatrix");
@@ -173,7 +175,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		shaderProgram.bind();
 		
 		shaderProgram.setUniform("projectionMatrix", scene.getProjectionMatrix());
-		shaderProgram.setUniform("texture_sampler", 0);
+		//shaderProgram.setUniform("texture_sampler", 0);
 		
 		System.out.println("i render " + scene.getRenderableObject().size() + " objects");
 
@@ -184,16 +186,28 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 //			shaderProgram.setUniform("rotationMatrix", obj.getPositionMatrix());
 //			shaderProgram.setUniform("scaleMatrix", obj.getPositionScale());
 		
+
+			Matrix4f positionMatrix = obj.getPositionMatrix(); 
+			//Matrix4f().identity().translate(localScreenXCoord, localScreenYCoord, 0.666f);
+			shaderProgram.setUniform("positionMatrix", positionMatrix);
+			
+			Matrix4f rotationMatrix = obj.getRotationMatrix(); 
+			// Matrix4f().identity().rotateX(0.0f).rotateY(0.0f).rotateZ(0.0f);
+			shaderProgram.setUniform("rotationMatrix", rotationMatrix);
+			
+			
+			Matrix4f scaleMatrix = obj.getScaleMatrix(); 
+			//Matrix4f().identity().scale(new Vector3f(displayedWidth, displayedHeight, 1.0f));
+			shaderProgram.setUniform("scaleMatrix", scaleMatrix);
+			
+			shaderProgram.setUniform("objectMatrix", obj.getObjectMatrix());
+			
 			glActiveTexture(GL_TEXTURE0);
 			
-//			smile.bind();
 			obj.getMesh().bind();
-//			if (obj.hasBackgroundImage()) {
-//				obj.getBackgroundImage().bind();
-//			}
 
 		    // Draw the vertices
-		    //glDrawArrays(GL_TRIANGLES, 0, mesh.getNumVertices());
+		    GL11.glDrawArrays(GL_TRIANGLES, 0, obj.getMesh().getVertexCount());
 			
 
 			/**
@@ -210,18 +224,9 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		for (IWidget obj : scene.getGuiElements()) {
 			
 
-			
-			//TODO: Протестить, те ли вообще поля я трогаю
-			//this.setExpandGeometry((float)this.geometry.width / (float)geometry.width, (float)this.geometry.height / (float)geometry.height, 1.0f);
-			//this.setExpandGeometry((float)geometry.width/ (float)1920 ,(float)geometry.height/ (float)1080  , 1.0f);
-
 			WidgetGeometry geometry = obj.getWidgetGeometry();
 			System.out.println("																				");
 			System.out.println("rendering UIElement :" + obj);
-
-			
-			
-			
 			
 			final float screenWidght = 1920.0f *1;
 			final float screenheight = 1080.0f *1;
@@ -334,7 +339,12 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 				obj.getBackgroundImage().bind();
 			}
 
-
+			/**
+			 * mode: Задает примитивы для рендеринга, в данном случае треугольники. Здесь никаких изменений.
+			 * count: Указывает количество элементов, которые должны быть отрисованы.
+			 * type: Указывает тип значения в данных индексов. В данном случае мы используем целые числа.
+			 * indices: Задает смещение, которое необходимо применить к данным индексов для начала рендеринга.
+			 */
 			glDrawElements(GL_TRIANGLES, uiGrapphicElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
 			
 		}
