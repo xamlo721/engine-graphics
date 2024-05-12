@@ -8,7 +8,6 @@ import static org.lwjgl.opengl.GL11.glDrawElements;
 import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 
 import org.joml.Matrix4f;
-import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
@@ -18,108 +17,23 @@ import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
 import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
 import com.xamlo.core.engine.graphics.api.gui.AbstractUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IWidget;
-import com.xamlo.core.engine.graphics.api.primitives.IVertex;
-import com.xamlo.core.engine.graphics.components.attribs.PositionAttribute;
-import com.xamlo.core.engine.graphics.components.attribs.TexCoordAttribute;
 import com.xamlo.core.engine.graphics.components.gui.WidgetGeometry;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
 import com.xamlo.core.engine.graphics.opengl.depth.EnumOpenGLDepthMode;
 import com.xamlo.core.engine.graphics.opengl.depth.OpenGLDepth;
-import com.xamlo.core.engine.graphics.primitives.Vertex;
-import com.xamlo.core.engine.graphics.primitives.VertexStructure;
+
 import com.xamlo.engine.api.resources.IResourceLoader;
-import com.xamlo.engine.api.resources.IShaderResource;
-import com.xamlo.engine.resources.ResourceLoader;
 
 public class DefaultSceneRenderer implements ISceneRenderer {
 	
-	private final IShaderResource<String> vertexShaderSource;
-	
-	private final IShaderResource<String> fragmentShaderSource;
-	
-	private ShaderProgram objectShader;
-	
-	public DefaultSceneRenderer(IResourceLoader<String> resourceLoader) {
-		this.vertexShaderSource = resourceLoader.loadShader("shader.primitive.textured.vertex");
-		this.fragmentShaderSource = resourceLoader.loadShader("shader.primitive.textured.fragment");
-	}
-
-	static AbstractRenderableObject uiGrapphicElement = new AbstractRenderableObject() {
-
-	    private static GraphicalMesh defaultWWidgetMesh;
-
-		@Override
-		public void init() {
-			//NO-OP
-		}
-
-		@Override
-		public void release() {
-			defaultWWidgetMesh.cleanup();				
-		}
-
-		@Override
-		public GraphicalMesh getMesh() {
-			
-			if (defaultWWidgetMesh == null) {
-				this.loadMesh();
-			}
-
-			return defaultWWidgetMesh;
-		}
-
-		@Override
-		public void loadMesh() {
-			
-	    	IVertex[] vertices = new Vertex[4];
-	    	int i = 0;
-	    	
-	    	VertexStructure vertexScruct = new VertexStructure();
-	    	vertexScruct.addAttribute(new PositionAttribute());
-	    	vertexScruct.addAttribute(new TexCoordAttribute());
-	    	vertexScruct.setVertexCount(4);
-
-//			Мне что-то кажется, что это не так работает. Шёл третий час ночи 09.02.2024
-//	    	IVertex v1 = new Vertex(5).append(new Vector3f(-1.0f,  1.0f, 0.0f)).append(new Vector2f(0.0f, 0.0f)); //V1
-//	    	IVertex v2 = new Vertex(5).append(new Vector3f(-1.0f, -1.0f, 0.0f)).append(new Vector2f(0.0f, 1.0f)); //V2
-//	    	IVertex v3 = new Vertex(5).append(new Vector3f( 1.0f, -1.0f, 0.0f)).append(new Vector2f(1.0f, 1.0f)); //V3
-//	    	IVertex v4 = new Vertex(5).append(new Vector3f( 1.0f,  1.0f, 0.0f)).append(new Vector2f(1.0f, 0.0f)); //V4
-	    	
-	    	IVertex v1 = new Vertex(5).append(new Vector3f( 0.0f,  1.0f, 0.0f)).append(new Vector2f(0.0f, 0.0f)); //V1
-	    	IVertex v2 = new Vertex(5).append(new Vector3f( 0.0f,  0.0f, 0.0f)).append(new Vector2f(0.0f, 1.0f)); //V2
-	    	IVertex v3 = new Vertex(5).append(new Vector3f( 1.0f,  0.0f, 0.0f)).append(new Vector2f(1.0f, 1.0f)); //V3
-	    	IVertex v4 = new Vertex(5).append(new Vector3f( 1.0f,  1.0f, 0.0f)).append(new Vector2f(1.0f, 0.0f)); //V4
-	    	
-	    	vertices[i++] = v1;
-	    	vertices[i++] = v2;
-	    	vertices[i++] = v3;
-	    	vertices[i++] = v4;
-
-
-	    	i = 0;
-	    	int[] indices = new int[6]; 
-	    	//FACE
-	    	indices[i++] = 0;
-	    	indices[i++] = 1;
-	    	indices[i++] = 3;
-	    	
-	    	indices[i++] = 3;
-	    	indices[i++] = 1;
-	    	indices[i++] = 2;
-
-	    	defaultWWidgetMesh = new GraphicalMesh(vertices, vertexScruct, indices);
-	    	
-	    	v1.release();
-	    	v2.release();
-	    	v3.release();
-	    	v4.release();
-	    	
-		}
-		
+	AbstractUIElement debugUIElement = new AbstractUIElement() {
+		//NO-OP DEBUG
 	};
 	
-	
+	public DefaultSceneRenderer(IResourceLoader<String> resourceLoader) {
+		
+	}
 
 	@Override
 	public void init() {
@@ -133,24 +47,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		OpenGLDepth.enable();
         OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
         
-		objectShader = new ShaderProgram();
-		objectShader.addVertexShader(vertexShaderSource.getShaderProgram());
-		objectShader.addFragmentShader(fragmentShaderSource.getShaderProgram());
-		objectShader.compileShader();
-		objectShader.bind();
-		try {
-			objectShader.createUniform("projectionMatrix");
-			objectShader.createUniform("positionMatrix");
-			//objectShader.createUniform("objectMatrix");
-			objectShader.createUniform("scaleMatrix");
-			objectShader.createUniform("rotationMatrix");
-			objectShader.createUniform("texture_sampler");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		objectShader.unbind();
+        debugUIElement.init();
         
         // clear the framebuffer
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -170,8 +67,6 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 	@Override
 	public void render(IScene scene) {
         
-
-		
 		System.out.println("i render " + scene.getRenderableObject().size() + " objects");
 
 		for (AbstractSceneElement obj : scene.getRenderableObject()) {
@@ -207,10 +102,10 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			glDrawElements(GL_TRIANGLES, obj.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
 			
 			// На самом деле разбинживать меш вовсе не обязательно, но я так хочу
-			//obj.getMesh().unbind();
+			obj.getMesh().unbind();
 
 			// На самом деле разбинживать шейдер вовсе не обязательно, но я так хочу
-			//obj.getShader().unbind();
+			obj.getShader().unbind();
 
 		}
 		
@@ -256,11 +151,11 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			}
 
 			
-			objectShader.bind();
+			debugUIElement.getShader().bind();
 			
-			objectShader.setUniform("projectionMatrix", scene.getProjectionMatrix());
+			debugUIElement.getShader().setUniform("projectionMatrix", scene.getProjectionMatrix());
 
-			objectShader.setUniform("positionMatrix", positionMatrix);
+			debugUIElement.getShader().setUniform("positionMatrix", positionMatrix);
 
 			/**
 			 * {1.0, 0.0, 0.0,  0.0}
@@ -278,7 +173,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			 * 
 			 */
 			Matrix4f rotationMatrix = new Matrix4f().identity().rotateX(0.0f).rotateY(0.0f).rotateZ(0.0f);
-			objectShader.setUniform("rotationMatrix", rotationMatrix);
+			debugUIElement.getShader().setUniform("rotationMatrix", rotationMatrix);
 
 			/**
 			 * 			    X						Y 								Z
@@ -292,7 +187,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			
 			
 			Matrix4f scaleMatrix = new Matrix4f().identity().scale(new Vector3f(displayedWidth, displayedHeight, 1.0f));
-			objectShader.setUniform("scaleMatrix", scaleMatrix);
+			debugUIElement.getShader().setUniform("scaleMatrix", scaleMatrix);
 
 			/**
 			 * { X , 0.0, 0.0,  0.0}
@@ -332,7 +227,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 				System.out.println("																													");
 			}
 			
-			uiGrapphicElement.getMesh().bind();
+			debugUIElement.getMesh().bind();
 						
 			if (obj.hasBackgroundImage()) {
 				GL13.glActiveTexture(GL_TEXTURE0);
@@ -345,14 +240,14 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			 * type: Указывает тип значения в данных индексов. В данном случае мы используем целые числа.
 			 * indices: Задает смещение, которое необходимо применить к данным индексов для начала рендеринга.
 			 */
-			glDrawElements(GL_TRIANGLES, uiGrapphicElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
+			glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
 			
 			
 			// На самом деле разбинживать меш вовсе не обязательно, но я так хочу
-			//uiElement.getMesh().unbind();
+			debugUIElement.getMesh().unbind();
 
 			// На самом деле разбинживать шейдер вовсе не обязательно, но я так хочу
-			//uiElement.getShader().unbind();
+			debugUIElement.getShader().unbind();
 
 		}
 		
@@ -362,7 +257,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 
 	@Override
 	public void cleanup() {
-		objectShader.cleanup();			
+		debugUIElement.release();		
 	}
 
 	
