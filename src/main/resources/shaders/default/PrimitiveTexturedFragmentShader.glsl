@@ -8,7 +8,6 @@ uniform sampler2D texture_sampler;
 
 void main() {
 
-//	color = vec4(inputColor, 1.0f);
 	vec4 texColor = texture(texture_sampler, outTexCoord);
 
 	//Штука для смешивания

@@ -1,8 +1,9 @@
 package com.xamlo.core.engine.graphics.components;
 
+import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
 import com.xamlo.engine.api.resources.IModelResource;
 
-public abstract class AbstractModel extends AbstractRenderableObject implements IModelResource<String> {
+public abstract class AbstractModel extends AbstractSceneElement implements IModelResource<String> {
 
 	protected final String identifier;
 

@@ -7,10 +7,11 @@ import com.xamlo.core.engine.graphics.api.components.scene.IMovable;
 import com.xamlo.core.engine.graphics.api.components.scene.IRenderable;
 import com.xamlo.core.engine.graphics.api.components.scene.IRotatable;
 import com.xamlo.core.engine.graphics.api.components.scene.IScalable;
+import com.xamlo.core.engine.graphics.api.components.scene.IShederable;
 import com.xamlo.core.engine.graphics.api.components.scene.IStretchable;
 
 
-public abstract class AbstractRenderableObject implements IMovable, IRenderable, IRotatable, IScalable, IStretchable  {
+public abstract class AbstractRenderableObject implements IMovable, IRenderable, IRotatable, IScalable, IStretchable, IShederable {
 	
 	/**
 	 * Матрица преобразования координат объекта в мировые
@@ -52,6 +53,12 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
 	 * Масштаб объекта
 	 */
 	protected float scale;
+	
+	/**
+	 * Для рендера разных моделей и объектов, необходимо использовать
+	 * различные шейдера. Пусть пока они хранятся тут
+	 */
+	protected ShaderProgram objectShader;
 
 	
 	public AbstractRenderableObject() {
@@ -152,6 +159,16 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
 	@Override
 	public float getScale() {
 		return scale;
+	}
+	
+	@Override
+	public void setShader(ShaderProgram currentShader) {
+		this.objectShader = currentShader;
+	}
+	
+	@Override
+	public ShaderProgram getShader() {
+		return this.objectShader;
 	}
 	
 	/**

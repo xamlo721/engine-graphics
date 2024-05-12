@@ -3,23 +3,20 @@ package com.xamlo.core.engine.graphics.components;
 import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
 import static org.lwjgl.opengl.GL11.GL_UNSIGNED_INT;
 import static org.lwjgl.opengl.GL11.glClearColor;
-import static org.lwjgl.opengl.GL11.glDrawElements;
-import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL11.glDrawElements;	
 
 import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
-import static org.lwjgl.opengl.GL13.glActiveTexture;
-
-import static org.lwjgl.opengl.GL13.GL_FRONT_AND_BACK;
-import static org.lwjgl.opengl.GL13.GL_LINE;
-import static org.lwjgl.opengl.GL13.glPolygonMode;
 
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
 
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
+import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
+import com.xamlo.core.engine.graphics.api.gui.AbstractUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IWidget;
 import com.xamlo.core.engine.graphics.api.primitives.IVertex;
 import com.xamlo.core.engine.graphics.components.attribs.PositionAttribute;
@@ -31,22 +28,21 @@ import com.xamlo.core.engine.graphics.opengl.depth.EnumOpenGLDepthMode;
 import com.xamlo.core.engine.graphics.opengl.depth.OpenGLDepth;
 import com.xamlo.core.engine.graphics.primitives.Vertex;
 import com.xamlo.core.engine.graphics.primitives.VertexStructure;
+import com.xamlo.engine.api.resources.IResourceLoader;
 import com.xamlo.engine.api.resources.IShaderResource;
-import com.xamlo.engine.api.resources.ResourceLoader;
+import com.xamlo.engine.resources.ResourceLoader;
 
 public class DefaultSceneRenderer implements ISceneRenderer {
-	
-	// Shaders
 	
 	private final IShaderResource<String> vertexShaderSource;
 	
 	private final IShaderResource<String> fragmentShaderSource;
 	
-	private ShaderProgram shaderProgram;
-
-	public DefaultSceneRenderer(ResourceLoader<String> resourceLoader) {
-		this.vertexShaderSource = resourceLoader.loadShader("shader.primitive.colored.vertex");
-		this.fragmentShaderSource = resourceLoader.loadShader("shader.primitive.colored.fragment");
+	private ShaderProgram objectShader;
+	
+	public DefaultSceneRenderer(IResourceLoader<String> resourceLoader) {
+		this.vertexShaderSource = resourceLoader.loadShader("shader.primitive.textured.vertex");
+		this.fragmentShaderSource = resourceLoader.loadShader("shader.primitive.textured.fragment");
 	}
 
 	static AbstractRenderableObject uiGrapphicElement = new AbstractRenderableObject() {
@@ -123,10 +119,12 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		
 	};
 	
+	
+
 	@Override
 	public void init() {
         //Рисовать рамку или заливать цветом - закомментировать, если хотим цвет
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//GL13.glPolygonMode(GL13.GL_FRONT_AND_BACK, GL13.GL_LINE);
 		
 		OpenGLBlend.enable();
 		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);
@@ -134,25 +132,25 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		
 		OpenGLDepth.enable();
         OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
-
-		shaderProgram = new ShaderProgram();
-		shaderProgram.addVertexShader(vertexShaderSource.getShaderProgram());
-		shaderProgram.addFragmentShader(fragmentShaderSource.getShaderProgram());
-		shaderProgram.compileShader();
-		shaderProgram.bind();
+        
+		objectShader = new ShaderProgram();
+		objectShader.addVertexShader(vertexShaderSource.getShaderProgram());
+		objectShader.addFragmentShader(fragmentShaderSource.getShaderProgram());
+		objectShader.compileShader();
+		objectShader.bind();
 		try {
-			shaderProgram.createUniform("projectionMatrix");
-			shaderProgram.createUniform("objectMatrix");
-			shaderProgram.createUniform("positionMatrix");
-			shaderProgram.createUniform("scaleMatrix");
-			shaderProgram.createUniform("rotationMatrix");
-			shaderProgram.createUniform("texture_sampler");
+			objectShader.createUniform("projectionMatrix");
+			objectShader.createUniform("positionMatrix");
+			//objectShader.createUniform("objectMatrix");
+			objectShader.createUniform("scaleMatrix");
+			objectShader.createUniform("rotationMatrix");
+			objectShader.createUniform("texture_sampler");
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-		shaderProgram.unbind();
+		objectShader.unbind();
         
         // clear the framebuffer
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -172,44 +170,34 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 	@Override
 	public void render(IScene scene) {
         
-		shaderProgram.bind();
-		
-		shaderProgram.setUniform("projectionMatrix", scene.getProjectionMatrix());
-		//shaderProgram.setUniform("texture_sampler", 0);
+
 		
 		System.out.println("i render " + scene.getRenderableObject().size() + " objects");
 
-		for (AbstractRenderableObject obj : scene.getRenderableObject()) {
+		for (AbstractSceneElement obj : scene.getRenderableObject()) {
+			
+			obj.getShader().bind();
+			
+			obj.getShader().setUniform("projectionMatrix", scene.getProjectionMatrix());
+			
+			//obj.getShader().setUniform("texture_sampler", 0);
+						
 			//Теперь матрица преобразования обновляется каждый раз
-			//shaderProgram.setUniform("worldMatrix", obj.getWorldMatrix());
-//			shaderProgram.setUniform("positionMatrix", obj.getPositionMatrix());
-//			shaderProgram.setUniform("rotationMatrix", obj.getPositionMatrix());
-//			shaderProgram.setUniform("scaleMatrix", obj.getPositionScale());
-		
-
-			Matrix4f positionMatrix = obj.getPositionMatrix(); 
-			//Matrix4f().identity().translate(localScreenXCoord, localScreenYCoord, 0.666f);
-			shaderProgram.setUniform("positionMatrix", positionMatrix);
+			obj.getShader().setUniform("positionMatrix", obj.getPositionMatrix());
 			
-			Matrix4f rotationMatrix = obj.getRotationMatrix(); 
-			// Matrix4f().identity().rotateX(0.0f).rotateY(0.0f).rotateZ(0.0f);
-			shaderProgram.setUniform("rotationMatrix", rotationMatrix);
+			obj.getShader().setUniform("rotationMatrix", obj.getRotationMatrix());
 			
+			obj.getShader().setUniform("scaleMatrix", obj.getScaleMatrix());
 			
-			Matrix4f scaleMatrix = obj.getScaleMatrix(); 
-			//Matrix4f().identity().scale(new Vector3f(displayedWidth, displayedHeight, 1.0f));
-			shaderProgram.setUniform("scaleMatrix", scaleMatrix);
+			obj.getShader().setUniform("objectMatrix", obj.getObjectMatrix());
 			
-			shaderProgram.setUniform("objectMatrix", obj.getObjectMatrix());
-			
-			glActiveTexture(GL_TEXTURE0);
+			GL13.glActiveTexture(GL_TEXTURE0);
 			
 			obj.getMesh().bind();
 
 		    // Draw the vertices
 		    GL11.glDrawArrays(GL_TRIANGLES, 0, obj.getMesh().getVertexCount());
 			
-
 			/**
 			 * mode: Задает примитивы для рендеринга, в данном случае треугольники. Здесь никаких изменений.
 			 * count: Указывает количество элементов, которые должны быть отрисованы.
@@ -217,13 +205,20 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			 * indices: Задает смещение, которое необходимо применить к данным индексов для начала рендеринга.
 			 */
 			glDrawElements(GL_TRIANGLES, obj.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
+			
+			// На самом деле разбинживать меш вовсе не обязательно, но я так хочу
+			//obj.getMesh().unbind();
+
+			// На самом деле разбинживать шейдер вовсе не обязательно, но я так хочу
+			//obj.getShader().unbind();
 
 		}
+		
+		
 		System.out.println("i render " + scene.getGuiElements().size() + " ui elements");
 
 		for (IWidget obj : scene.getGuiElements()) {
 			
-
 			WidgetGeometry geometry = obj.getWidgetGeometry();
 			System.out.println("																				");
 			System.out.println("rendering UIElement :" + obj);
@@ -260,7 +255,12 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 				System.out.println("vector moved to : [" + positionMatrix.transformPosition(startPoint).toString() + "]" );	
 			}
 
-			shaderProgram.setUniform("positionMatrix", positionMatrix);
+			
+			objectShader.bind();
+			
+			objectShader.setUniform("projectionMatrix", scene.getProjectionMatrix());
+
+			objectShader.setUniform("positionMatrix", positionMatrix);
 
 			/**
 			 * {1.0, 0.0, 0.0,  0.0}
@@ -278,7 +278,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			 * 
 			 */
 			Matrix4f rotationMatrix = new Matrix4f().identity().rotateX(0.0f).rotateY(0.0f).rotateZ(0.0f);
-			shaderProgram.setUniform("rotationMatrix", rotationMatrix);
+			objectShader.setUniform("rotationMatrix", rotationMatrix);
 
 			/**
 			 * 			    X						Y 								Z
@@ -292,7 +292,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			
 			
 			Matrix4f scaleMatrix = new Matrix4f().identity().scale(new Vector3f(displayedWidth, displayedHeight, 1.0f));
-			shaderProgram.setUniform("scaleMatrix", scaleMatrix);
+			objectShader.setUniform("scaleMatrix", scaleMatrix);
 
 			/**
 			 * { X , 0.0, 0.0,  0.0}
@@ -335,7 +335,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			uiGrapphicElement.getMesh().bind();
 						
 			if (obj.hasBackgroundImage()) {
-				glActiveTexture(GL_TEXTURE0);
+				GL13.glActiveTexture(GL_TEXTURE0);
 				obj.getBackgroundImage().bind();
 			}
 
@@ -347,18 +347,22 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			 */
 			glDrawElements(GL_TRIANGLES, uiGrapphicElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
 			
+			
+			// На самом деле разбинживать меш вовсе не обязательно, но я так хочу
+			//uiElement.getMesh().unbind();
+
+			// На самом деле разбинживать шейдер вовсе не обязательно, но я так хочу
+			//uiElement.getShader().unbind();
+
 		}
 		
-	    shaderProgram.unbind();
 
-
-		
 	}
 	
 
 	@Override
 	public void cleanup() {
-		shaderProgram.cleanup();			
+		objectShader.cleanup();			
 	}
 
 	

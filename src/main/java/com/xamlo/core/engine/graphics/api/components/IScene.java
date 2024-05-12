@@ -4,8 +4,8 @@ import java.util.List;
 
 import org.joml.Matrix4f;
 
+import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
 import com.xamlo.core.engine.graphics.api.gui.IWidget;
-import com.xamlo.core.engine.graphics.components.AbstractRenderableObject;
 
 /*
  * Интерфейс, описывающий правила в заимодействия с понятием "Сцена"
@@ -20,7 +20,7 @@ public interface IScene {
 	
 	void load();
 
-	List<AbstractRenderableObject> getRenderableObject();
+	List<AbstractSceneElement> getRenderableObject();
 	
 	List<IWidget> getGuiElements();
 	

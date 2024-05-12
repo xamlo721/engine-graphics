@@ -3,7 +3,7 @@ package com.xamlo.engine.resource;
 import com.xamlo.core.engine.graphics.components.Texture;
 import com.xamlo.engine.api.resources.IShaderResource;
 import com.xamlo.engine.api.resources.ITextureResource;
-import com.xamlo.engine.api.resources.ResourceLoader;
+import com.xamlo.engine.api.resources.IResourceLoader;
 import org.lwjgl.BufferUtils;
 
 import java.io.BufferedReader;
@@ -21,7 +21,7 @@ import java.util.StringJoiner;
 
 import static org.lwjgl.stb.STBImage.*;
 
-public class SimpleResourceLoader implements ResourceLoader<String> {
+public class SimpleResourceLoader implements IResourceLoader<String> {
 
     private final Properties resourceMap;
 
