@@ -1,5 +1,7 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
+import org.joml.Vector4f;
+
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 
 public class Color implements IColor {
@@ -39,5 +41,10 @@ public class Color implements IColor {
     public int getAlpha() {
         return alpha;
     }
+
+	@Override
+	public Vector4f getColorVector() {
+		return new Vector4f(this.red, this.green, this.blue, this.alpha);
+	}
     
 }

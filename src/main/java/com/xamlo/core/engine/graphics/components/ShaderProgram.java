@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.joml.Matrix4f;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
 import static org.lwjgl.opengl.GL45.*;
@@ -221,6 +224,40 @@ public class ShaderProgram {
         glUniform1i(uniforms.get(uniformName), value);
     }
     
+    public void setUniform(String uniformName, float value) {
+        glUniform1f(uniforms.get(uniformName), value);
+    }
+
+    public void setUniform(String uniformName, Vector4f value) {
+        glUniform4f(uniforms.get(uniformName), value.x, value.y, value.z, value.w);
+    }
+
+    public void setUniform(String uniformName, Vector3f value) {
+        glUniform3f(uniforms.get(uniformName), value.x, value.y, value.z);
+    }
+
+    public void setUniform(String uniformName, Vector2f value) {
+        glUniform2f(uniforms.get(uniformName), value.x, value.y);
+    }
+
+    public void setUniform(String uniformName, float[] values) {
+        switch (values.length) {
+            case 1:
+                glUniform1f(uniforms.get(uniformName), values[0]);
+                break;
+            case 2:
+                glUniform2f(uniforms.get(uniformName), values[0], values[1]);
+                break;
+            case 3:
+                glUniform3f(uniforms.get(uniformName), values[0], values[1], values[2]);
+                break;
+            case 4:
+                glUniform4f(uniforms.get(uniformName), values[0], values[1], values[2], values[3]);
+                break;
+            default:
+                throw new IllegalArgumentException("Array size must be between 1 and 4");
+        }
+    }
 	
 	/**
 	 * Полная очистка шейдера, по сути деструктор

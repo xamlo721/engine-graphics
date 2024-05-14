@@ -40,6 +40,8 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 			objectShader.createUniform("positionMatrix");
 			objectShader.createUniform("scaleMatrix");
 			objectShader.createUniform("rotationMatrix");
+            objectShader.createUniform("hoverColor");
+            objectShader.createUniform("hoverIntensity");
 			objectShader.createUniform("texture_sampler");
 
 		} catch (Exception e) {

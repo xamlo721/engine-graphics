@@ -7,11 +7,13 @@ import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.lwjgl.opengl.GL13;
 
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.gui.AbstractUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IBackgroundSupport;
+import com.xamlo.core.engine.graphics.api.gui.IHoverable;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
@@ -54,6 +56,14 @@ public class UIElementRenderer {
 		Matrix4f scaleMatrix = new Matrix4f().identity().scale(new Vector3f(displayedWidth, displayedHeight, 1.0f));
 		debugUIElement.getShader().setUniform("scaleMatrix", scaleMatrix);
 
+        if (element instanceof IHoverable && ((IHoverable)element).isHovered()) {
+            debugUIElement.getShader().setUniform("hoverColor", ((IHoverable)element).getHoverColor().getColorVector());
+            debugUIElement.getShader().setUniform("hoverIntensity", 0.5f); // Пример интенсивности
+        } else {
+            debugUIElement.getShader().setUniform("hoverColor", new Vector4f(0, 0, 0, 0));
+            debugUIElement.getShader().setUniform("hoverIntensity", 0.0f);
+        }
+        
 		debugUIElement.getMesh().bind();
 				
 		if (element instanceof IBackgroundSupport && ((IBackgroundSupport)element).hasBackgroundImage()) {
