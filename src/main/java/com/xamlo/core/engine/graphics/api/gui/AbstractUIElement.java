@@ -15,46 +15,15 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 	private final IShaderResource<String> fragmentShaderSource;
 	
 	private static IModelResource<String> model;
-	
-	
-	protected static AbstractRenderableObject uiGrapphicElement = new AbstractRenderableObject() {
-
-	    private static GraphicalMesh defaultWWidgetMesh;
-
-		@Override
-		public void init() {
-			//NO-OP
-		}
-
-		@Override
-		public void release() {
-			defaultWWidgetMesh.cleanup();				
-		}
-
-		@Override
-		public GraphicalMesh getMesh() {
-			
-			if (defaultWWidgetMesh == null) {
-				this.loadMesh();
-			}
-
-			return defaultWWidgetMesh;
-		}
-
-		@Override
-		public void loadMesh() {
-			model = ResourceLoader.INSTANCE().loadModel("model.gui.default.element");
-	    	defaultWWidgetMesh = new GraphicalMesh(model.getVertices(), model.getStructure(), model.getIndices());
-	    	
-		}
-		
-	};
+    private static GraphicalMesh defaultWWidgetMesh;
 	
 	
 	public AbstractUIElement() {
 		super();
-		this.vertexShaderSource = ResourceLoader.INSTANCE().loadShader("shader.primitive.textured.vertex");
-		this.fragmentShaderSource = ResourceLoader.INSTANCE().loadShader("shader.primitive.textured.fragment");
+		this.vertexShaderSource = ResourceLoader.INSTANCE().loadShader("shader.default.gui.textured.vertex");
+		this.fragmentShaderSource = ResourceLoader.INSTANCE().loadShader("shader.default.gui.textured.fragment");
+		model = ResourceLoader.INSTANCE().loadModel("model.gui.default.element");
+
 	}
 	
 	@Override
@@ -83,18 +52,24 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 	@Override
 	public void release() {
 		this.objectShader.cleanup();
-		
+		defaultWWidgetMesh.cleanup();				
 	}
 
 	@Override
 	public void loadMesh() {
-		uiGrapphicElement.loadMesh();
+    	defaultWWidgetMesh = new GraphicalMesh(model.getVertices(), model.getStructure(), model.getIndices());
+    	
 		
 	}
 
 	@Override
 	public GraphicalMesh getMesh() {
-		return uiGrapphicElement.getMesh();
+		
+		if (defaultWWidgetMesh == null) {
+			this.loadMesh();
+		}
+
+		return defaultWWidgetMesh;
 	}
 
 }
