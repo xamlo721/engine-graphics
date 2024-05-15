@@ -213,14 +213,14 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
 		        .rotateZ((float)Math.toRadians(rotation.z))
                 .scale(geometryDeformation.mul(scale));
 
-        System.out.println("[MATRIX] geometryDef: " + geometryDeformation);
-        System.out.println("[MATRIX] position: " + position);
-        
-		System.out.println("[MATRIX] updating world matrix for rot" + this.rotation.x + ", " + this.rotation.y + ", " + this.rotation.z);
-		System.out.println("[MATRIX] {" + worldMatrix.m00() + ", " + worldMatrix.m01() + ", " + worldMatrix.m02() + ", " + worldMatrix.m03() + "}");
-		System.out.println("[MATRIX] {" + worldMatrix.m10() + ", " + worldMatrix.m11() + ", " + worldMatrix.m12() + ", " + worldMatrix.m13() + "}");
-		System.out.println("[MATRIX] {" + worldMatrix.m20() + ", " + worldMatrix.m21() + ", " + worldMatrix.m22() + ", " + worldMatrix.m23() + "}");
-		System.out.println("[MATRIX] {" + worldMatrix.m30() + ", " + worldMatrix.m31() + ", " + worldMatrix.m32() + ", " + worldMatrix.m33() + "}");
+//        System.out.println("[MATRIX] geometryDef: " + geometryDeformation);
+//        System.out.println("[MATRIX] position: " + position);
+//        
+//		System.out.println("[MATRIX] updating world matrix for rot" + this.rotation.x + ", " + this.rotation.y + ", " + this.rotation.z);
+//		System.out.println("[MATRIX] {" + worldMatrix.m00() + ", " + worldMatrix.m01() + ", " + worldMatrix.m02() + ", " + worldMatrix.m03() + "}");
+//		System.out.println("[MATRIX] {" + worldMatrix.m10() + ", " + worldMatrix.m11() + ", " + worldMatrix.m12() + ", " + worldMatrix.m13() + "}");
+//		System.out.println("[MATRIX] {" + worldMatrix.m20() + ", " + worldMatrix.m21() + ", " + worldMatrix.m22() + ", " + worldMatrix.m23() + "}");
+//		System.out.println("[MATRIX] {" + worldMatrix.m30() + ", " + worldMatrix.m31() + ", " + worldMatrix.m32() + ", " + worldMatrix.m33() + "}");
 
         return worldMatrix;
     }
@@ -245,12 +245,12 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
         .identity()
         .translate(position);
 
-		System.out.println("[MATRIX] position: " + position);
-		System.out.println("[MATRIX] updating position matrix");
-		System.out.println("[MATRIX] {" + positionMatrix.m00() + ", " + positionMatrix.m01() + ", " + positionMatrix.m02() + ", " + positionMatrix.m03() + "}");
-		System.out.println("[MATRIX] {" + positionMatrix.m10() + ", " + positionMatrix.m11() + ", " + positionMatrix.m12() + ", " + positionMatrix.m13() + "}");
-		System.out.println("[MATRIX] {" + positionMatrix.m20() + ", " + positionMatrix.m21() + ", " + positionMatrix.m22() + ", " + positionMatrix.m23() + "}");
-		System.out.println("[MATRIX] {" + positionMatrix.m30() + ", " + positionMatrix.m31() + ", " + positionMatrix.m32() + ", " + positionMatrix.m33() + "}");
+//		System.out.println("[MATRIX] position: " + position);
+//		System.out.println("[MATRIX] updating position matrix");
+//		System.out.println("[MATRIX] {" + positionMatrix.m00() + ", " + positionMatrix.m01() + ", " + positionMatrix.m02() + ", " + positionMatrix.m03() + "}");
+//		System.out.println("[MATRIX] {" + positionMatrix.m10() + ", " + positionMatrix.m11() + ", " + positionMatrix.m12() + ", " + positionMatrix.m13() + "}");
+//		System.out.println("[MATRIX] {" + positionMatrix.m20() + ", " + positionMatrix.m21() + ", " + positionMatrix.m22() + ", " + positionMatrix.m23() + "}");
+//		System.out.println("[MATRIX] {" + positionMatrix.m30() + ", " + positionMatrix.m31() + ", " + positionMatrix.m32() + ", " + positionMatrix.m33() + "}");
 		
 		return positionMatrix;
     }
@@ -276,15 +276,15 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
 			.rotateX((float)Math.toRadians(rotation.x))
 			.rotateY((float)Math.toRadians(rotation.y))
 			.rotateZ((float)Math.toRadians(rotation.z));
-		System.out.println("[MATRIX] geometryDef: " + geometryDeformation);
-		System.out.println("[MATRIX] position: " + position);
-		
-		System.out.println("[MATRIX] updating rotation matrix for rot" + this.rotation.x + ", " + this.rotation.y + ", " + this.rotation.z);
-		System.out.println("[MATRIX] {" + rotationMatrix.m00() + ", " + rotationMatrix.m01() + ", " + rotationMatrix.m02() + ", " + rotationMatrix.m03() + "}");
-		System.out.println("[MATRIX] {" + rotationMatrix.m10() + ", " + rotationMatrix.m11() + ", " + rotationMatrix.m12() + ", " + rotationMatrix.m13() + "}");
-		System.out.println("[MATRIX] {" + rotationMatrix.m20() + ", " + rotationMatrix.m21() + ", " + rotationMatrix.m22() + ", " + rotationMatrix.m23() + "}");
-		System.out.println("[MATRIX] {" + rotationMatrix.m30() + ", " + rotationMatrix.m31() + ", " + rotationMatrix.m32() + ", " + rotationMatrix.m33() + "}");
-		
+//		System.out.println("[MATRIX] geometryDef: " + geometryDeformation);
+//		System.out.println("[MATRIX] position: " + position);
+//		
+//		System.out.println("[MATRIX] updating rotation matrix for rot" + this.rotation.x + ", " + this.rotation.y + ", " + this.rotation.z);
+//		System.out.println("[MATRIX] {" + rotationMatrix.m00() + ", " + rotationMatrix.m01() + ", " + rotationMatrix.m02() + ", " + rotationMatrix.m03() + "}");
+//		System.out.println("[MATRIX] {" + rotationMatrix.m10() + ", " + rotationMatrix.m11() + ", " + rotationMatrix.m12() + ", " + rotationMatrix.m13() + "}");
+//		System.out.println("[MATRIX] {" + rotationMatrix.m20() + ", " + rotationMatrix.m21() + ", " + rotationMatrix.m22() + ", " + rotationMatrix.m23() + "}");
+//		System.out.println("[MATRIX] {" + rotationMatrix.m30() + ", " + rotationMatrix.m31() + ", " + rotationMatrix.m32() + ", " + rotationMatrix.m33() + "}");
+//		
 		return rotationMatrix;
     }	
     
@@ -307,15 +307,15 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
     	Matrix4f rotationMatrix = new Matrix4f()
         .identity()
         .scale(geometryDeformation.mul(scale));
-		System.out.println("[MATRIX] geometryDef: " + geometryDeformation);
-		System.out.println("[MATRIX] position: " + position);
-		
-		System.out.println("[MATRIX] updating scale matrix for rot" + this.rotation.x + ", " + this.rotation.y + ", " + this.rotation.z);
-		System.out.println("[MATRIX] {" + rotationMatrix.m00() + ", " + rotationMatrix.m01() + ", " + rotationMatrix.m02() + ", " + rotationMatrix.m03() + "}");
-		System.out.println("[MATRIX] {" + rotationMatrix.m10() + ", " + rotationMatrix.m11() + ", " + rotationMatrix.m12() + ", " + rotationMatrix.m13() + "}");
-		System.out.println("[MATRIX] {" + rotationMatrix.m20() + ", " + rotationMatrix.m21() + ", " + rotationMatrix.m22() + ", " + rotationMatrix.m23() + "}");
-		System.out.println("[MATRIX] {" + rotationMatrix.m30() + ", " + rotationMatrix.m31() + ", " + rotationMatrix.m32() + ", " + rotationMatrix.m33() + "}");
-		
+//		System.out.println("[MATRIX] geometryDef: " + geometryDeformation);
+//		System.out.println("[MATRIX] position: " + position);
+//		
+//		System.out.println("[MATRIX] updating scale matrix for rot" + this.rotation.x + ", " + this.rotation.y + ", " + this.rotation.z);
+//		System.out.println("[MATRIX] {" + rotationMatrix.m00() + ", " + rotationMatrix.m01() + ", " + rotationMatrix.m02() + ", " + rotationMatrix.m03() + "}");
+//		System.out.println("[MATRIX] {" + rotationMatrix.m10() + ", " + rotationMatrix.m11() + ", " + rotationMatrix.m12() + ", " + rotationMatrix.m13() + "}");
+//		System.out.println("[MATRIX] {" + rotationMatrix.m20() + ", " + rotationMatrix.m21() + ", " + rotationMatrix.m22() + ", " + rotationMatrix.m23() + "}");
+//		System.out.println("[MATRIX] {" + rotationMatrix.m30() + ", " + rotationMatrix.m31() + ", " + rotationMatrix.m32() + ", " + rotationMatrix.m33() + "}");
+//		
 		return rotationMatrix;
     }
     
