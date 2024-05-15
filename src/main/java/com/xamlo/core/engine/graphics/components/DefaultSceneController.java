@@ -147,18 +147,19 @@ public class DefaultSceneController implements ISceneController {
 			return;
 		}
 		
-		IUIElement element = this.scene.findElementAt(event.getOldXCoord() + event.getDx(), event.getOldYCoord() + event.getDy());
-		if (element != null && element instanceof IHoverable) {
-			IHoverable hoverableElement = (IHoverable) element;
-			hoverableElement.setHovered(true);
-		}
+
 		
 		for (IUIElement otherElement : scene.getGuiElements()) {
 			if ( otherElement instanceof IHoverable ) {
 				((IHoverable) otherElement).setHovered(false);
 			}
 		}
-		
+		IUIElement element = this.scene.findElementAt(event.getOldXCoord() + event.getDx(), event.getOldYCoord() + event.getDy());
+
+		if (element != null && element instanceof IHoverable) {
+			IHoverable hoverableElement = (IHoverable) element;
+			hoverableElement.setHovered(true);
+		}
 //		glfwSetCursorPos(LJWGLWindow.getInstance().getWindow(),
 //				mouse.getLockedCursorPosition().x(),
 //				mouse.getLockedCursorPosition().y());
