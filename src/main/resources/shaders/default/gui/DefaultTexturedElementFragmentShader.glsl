@@ -5,8 +5,8 @@ in  vec2 outTexCoord;
 out vec4 fragColor;
 
 uniform sampler2D texture_sampler;
-uniform vec4 hoverColor; // Новый uniform для цвета hover
-uniform float hoverIntensity; // Интенсивность эффекта
+uniform vec4 hoverColor;
+uniform float hoverIntensity;
 
 void main() {
     vec4 texColor = texture(texture_sampler, outTexCoord);
@@ -15,6 +15,5 @@ void main() {
         discard;
     }
 
-    // Смешиваем цвет текстуры с hover цветом
     fragColor = mix(texColor, hoverColor, hoverIntensity);
 }
