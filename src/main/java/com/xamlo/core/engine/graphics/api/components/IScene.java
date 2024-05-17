@@ -31,7 +31,7 @@ public interface IScene {
 	// Пока не уверен как правильно - сделаем World + несколько Renderer, тогда и разберемся
 	Matrix4f getProjectionMatrix();
 	
-	void tranformScene(Matrix4f transformMatrix);
+	void setProjectionMatrix(Matrix4f transformMatrix);
 	
 	void unload();
 	

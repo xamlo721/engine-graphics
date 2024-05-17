@@ -6,7 +6,6 @@ import static org.lwjgl.opengl.GL11.glDrawElements;
 import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL13;
 
@@ -19,7 +18,8 @@ import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 
 public class UIElementRenderer {
-
+	
+	private Matrix4f mvpMatrix = new Matrix4f();
 	
 	public void renderElement(AbstractUIElement debugUIElement, IUIElement element, IScene scene) {
 		
@@ -27,45 +27,43 @@ public class UIElementRenderer {
 			return;
 		}
 		
-		UIElementGeometry geometry = ((IResizable)element).getGeometry();
-	
-		final float screenWidght = 1920.0f *1;
-		final float screenheight = 1080.0f *1;
+	    UIElementGeometry geometry = ((IResizable)element).getGeometry();
 		
-		//Координты начала отрисовки объекта
-		float localScreenXCoord = (((float) geometry.getXCoord() - screenWidght/2)) / (screenWidght); 		// 0,052083332 --- 0,229166662
-		float localScreenYCoord = (((float) geometry.getYCoord() - screenheight/2)) / screenheight;   		// 0,037037037 --- 0,962962937
-
-		float displayedWidth = geometry.getWidth()  / screenWidght;							//0,17708333
-		float displayedHeight= geometry.getHeight() / screenheight;							//0,9259259
-
+	    final float screenWidth = 1920.0f;
+	    final float screenHeight = 1080.0f;
 		
-		Matrix4f positionMatrix = new Matrix4f().identity().translate(localScreenXCoord, localScreenYCoord, 0.666f);
+	    final float left = 0;
+	    final float right =  screenWidth;
+	    
+	    final float bottom = screenHeight;
+	    final float top =  0.0f;
+	    
+	    final float near = 0.2f;
+	    final float far = 1000.0f;
+	    
+	    float Tx = geometry.getXCoord() + geometry.getWidth()/2;
+	    float Ty = geometry.getYCoord() + geometry.getHeight()/2;
+	    float Tz = -1.0f; // вместо 0.0f
 
-		
 		debugUIElement.getShader().bind();
-		
-		debugUIElement.getShader().setUniform("projectionMatrix", scene.getProjectionMatrix());
+	    
+		mvpMatrix.zero()
+				.setOrtho(left, right, bottom, top, near, far)
+				.translate(Tx, Ty, Tz)
+				.scale(geometry.getWidth(), -geometry.getHeight(), 1.0f);
 
-		debugUIElement.getShader().setUniform("positionMatrix", positionMatrix);
-
-		Matrix4f rotationMatrix = new Matrix4f().identity().rotateX(0.0f).rotateY(0.0f).rotateZ(0.0f);
-		debugUIElement.getShader().setUniform("rotationMatrix", rotationMatrix);
-		
-		
-		Matrix4f scaleMatrix = new Matrix4f().identity().scale(new Vector3f(displayedWidth, displayedHeight, 1.0f));
-		debugUIElement.getShader().setUniform("scaleMatrix", scaleMatrix);
-
+	    debugUIElement.getShader().setUniform("mvp", mvpMatrix);
+	    
         if (element instanceof IHoverable && ((IHoverable)element).isHovered()) {
             debugUIElement.getShader().setUniform("hoverColor", ((IHoverable)element).getHoverColor().getColorVector());
-            debugUIElement.getShader().setUniform("hoverIntensity", 0.5f); // Пример интенсивности
+            debugUIElement.getShader().setUniform("hoverIntensity", 0.001f);
         } else {
             debugUIElement.getShader().setUniform("hoverColor", new Vector4f(0, 0, 0, 0));
             debugUIElement.getShader().setUniform("hoverIntensity", 0.0f);
         }
         
 		debugUIElement.getMesh().bind();
-				
+	    
 		if (element instanceof IBackgroundSupport && ((IBackgroundSupport)element).hasBackgroundImage()) {
 			GL13.glActiveTexture(GL_TEXTURE0);
 			((IBackgroundSupport)element).getBackgroundImage().bind();
@@ -79,14 +77,12 @@ public class UIElementRenderer {
 		 */
 		glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
 		
-		
 		// На самом деле разбинживать меш вовсе не обязательно, но я так хочу
 		debugUIElement.getMesh().unbind();
 
 		// На самом деле разбинживать шейдер вовсе не обязательно, но я так хочу
 		debugUIElement.getShader().unbind();
 
-		
 	}
-	
+
 }
