@@ -190,31 +190,12 @@ public class ShaderProgram {
 	    try (MemoryStack stack = MemoryStack.stackPush()) {
 	        FloatBuffer fb = stack.mallocFloat(16);
 	        value.get(fb);
-	        
-			
-//			System.out.println("FloatBuffer matrix " + uniformName);
-//			System.out.println("{" + fb.get(0) + ", " + fb.get(1) + ", " + fb.get(2) + ", " + fb.get(3) + "}");
-//			System.out.println("{" + fb.get(4) + ", " + fb.get(5) + ", " + fb.get(6) + ", " + fb.get(7) + "}");
-//			System.out.println("{" + fb.get(8) + ", " + fb.get(9) + ", " + fb.get(10) + ", " + fb.get(11) + "}");
-//			System.out.println("{" + fb.get(12) + ", " + fb.get(13) + ", " + fb.get(14) + ", " + fb.get(15) + "}");
 
 	        glUniformMatrix4fv(uniforms.get(uniformName), false, fb);
-	        
-//			System.out.println("updating matrix " + uniformName);
-//			System.out.println("{" + value.m00() + ", " + value.m01() + ", " + value.m02() + ", " + value.m03() + "}");
-//			System.out.println("{" + value.m10() + ", " + value.m11() + ", " + value.m12() + ", " + value.m13() + "}");
-//			System.out.println("{" + value.m20() + ", " + value.m21() + ", " + value.m22() + ", " + value.m23() + "}");
-//			System.out.println("{" + value.m30() + ", " + value.m31() + ", " + value.m32() + ", " + value.m33() + "}");
-
+//			Достать её оттуда можно с помощью:
 //			float[] arr = new float[16];
 //			glUseProgram(program);
 //			glGetUniformfv(this.program, uniforms.get(uniformName), arr);
-//			
-//			System.out.println("returned matrix " + uniformName);
-//			System.out.println("{" + arr[0] + ", " + arr[1] + ", " + arr[2] + ", " + arr[3] + "}");
-//			System.out.println("{" + arr[4] + ", " + arr[5] + ", " + arr[6] + ", " + arr[7] + "}");
-//			System.out.println("{" + arr[8] + ", " + arr[9] + ", " + arr[10] + ", " + arr[11] + "}");
-//			System.out.println("{" + arr[12] + ", " + arr[13] + ", " + arr[14] + ", " + arr[15] + "}");
 
 	    }
 	    
