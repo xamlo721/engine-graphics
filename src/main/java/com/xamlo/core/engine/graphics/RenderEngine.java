@@ -105,6 +105,7 @@ public class RenderEngine implements IRenderEngine {
            	    camera.getNearDistance(), 
            	    camera.getFarDistance()
         );
+        
         projectionMatrix = projectionMatrix.mul(camera.getViewMatrix());
 
 	}
@@ -168,16 +169,15 @@ public class RenderEngine implements IRenderEngine {
 	@Override
 	public void transformScene() {
 		
-        scene.tranformScene(projectionMatrix);
-        
+		
         projectionMatrix = new Matrix4f().perspective(
-       		    camera.getFov(), 
-           		camera.getAspectRatio(),
-           	    camera.getNearDistance(), 
-           	    camera.getFarDistance()
-        );
+	            camera.getFov(), 
+	            camera.getAspectRatio(),
+	            camera.getNearDistance(), 
+	            camera.getFarDistance()
+	    );
         
-        projectionMatrix = projectionMatrix.mul(camera.getViewMatrix());
+	    scene.setProjectionMatrix(projectionMatrix.mul(camera.getViewMatrix()));
 		
 	}
 
