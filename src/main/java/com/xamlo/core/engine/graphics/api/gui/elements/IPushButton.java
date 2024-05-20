@@ -1,12 +1,9 @@
 package com.xamlo.core.engine.graphics.api.gui.elements;
 
-import com.xamlo.core.engine.graphics.api.gui.IActivatable;
 import com.xamlo.core.engine.graphics.api.gui.IClickable;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
-import com.xamlo.core.engine.graphics.api.gui.IFocusable;
 import com.xamlo.core.engine.graphics.api.gui.IHoverable;
 import com.xamlo.core.engine.graphics.api.gui.IIconSupport;
-import com.xamlo.core.engine.graphics.api.gui.IPressable;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 
 /**
@@ -14,12 +11,9 @@ import com.xamlo.core.engine.graphics.api.gui.IResizable;
  * Предоставляет методы для управления визуальным представлением и поведением кнопки.
  */
 public interface IPushButton extends ILabel, 
-									 IHoverable, 
-									 IFocusable, 
-									 IPressable,
+									 IHoverable,
 									 IIconSupport,
 									 IClickable,
-									 IActivatable,
 									 IResizable {
 
     /**

@@ -211,15 +211,6 @@ public class Widget implements IWidget {
 		return this.backgroundColor;
 	}
 
-	@Override
-	public void setFont(IFont font) {
-		this.font = font;
-	}
-
-	@Override
-	public IFont getFont() {
-		return this.font;
-	}
 
 	@Override
 	public void setFocused(boolean focusable) {

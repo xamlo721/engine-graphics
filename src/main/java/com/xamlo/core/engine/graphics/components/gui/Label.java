@@ -10,6 +10,8 @@ public class Label extends Widget implements ILabel {
     protected String text;
     protected IColor textColor;
     protected IFont font;
+    protected boolean isEnabled;
+    protected IColor disableColor;
 
     public Label() {
         super();
@@ -22,7 +24,6 @@ public class Label extends Widget implements ILabel {
         this.text = text;
         this.textColor = new Color(0, 0, 0);
     }
-    
     
     @Override
     public void setText(String text) {
@@ -46,12 +47,32 @@ public class Label extends Widget implements ILabel {
 
     @Override
     public void setFont(IFont font) {
-        super.setFont(font);
+        this.font = font;
     }
 
     @Override
     public IFont getFont() {
-        return super.getFont();
+        return this.font;
     }
+
+	@Override
+	public IColor getDisabledColor() {
+		return this.disableColor;
+	}
+
+	@Override
+	public void setEnabled(boolean enabled) {
+		this.isEnable = enabled;
+	}
+
+	@Override
+	public boolean isEnabled() {
+		return this.isEnable;
+	}
+
+	@Override
+	public void setDisabledColor(IColor color) {
+		this.disableColor = color;
+	}
 
 }
