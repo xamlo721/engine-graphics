@@ -46,6 +46,7 @@ public class DefaultSceneRenderer implements ISceneRenderer {
         OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
         
         debugUIElement.init();
+        uiRenderer.initFonts();
         
         // clear the framebuffer
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -112,9 +113,8 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		// System.out.println("i render " + scene.getGuiElements().size() + " ui elements");
 
 		for (IUIElement element : scene.getGuiElements()) {
-			
 			uiRenderer.renderElement(debugUIElement, element, scene);
-
+			uiRenderer.renderText(debugUIElement, element, scene);
 		}
 		
 
