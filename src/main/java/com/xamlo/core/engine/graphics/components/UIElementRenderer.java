@@ -7,11 +7,13 @@ import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
+import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.gui.AbstractUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IBackgroundSupport;
+import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.IHoverable;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
@@ -54,9 +56,34 @@ public class UIElementRenderer {
 
 	    debugUIElement.getShader().setUniform("mvp", mvpMatrix);
 	    
+        boolean hasTexture = element instanceof IBackgroundSupport && ((IBackgroundSupport)element).hasBackgroundImage();
+        debugUIElement.getShader().setUniform("useTexture", hasTexture);
+
+        Vector4f bgColorVector;
+        if (element instanceof IBackgroundSupport) {
+            IColor bgColor = ((IBackgroundSupport)element).getBackgroundColor();
+            if (bgColor != null) {
+                bgColorVector = bgColor.getColorVector();
+            } else {
+                bgColorVector = new Vector4f(1, 1, 1, 1); // Белый по умолчанию
+            }
+        } else {
+            bgColorVector = new Vector4f(1, 1, 1, 1); // Белый по умолчанию
+        }
+        debugUIElement.getShader().setUniform("backgroundColor", bgColorVector);
+        
         if (element instanceof IHoverable && ((IHoverable)element).isHovered()) {
-            debugUIElement.getShader().setUniform("hoverColor", ((IHoverable)element).getHoverColor().getColorVector());
-            debugUIElement.getShader().setUniform("hoverIntensity", 0.001f);
+        	
+            Vector4f hoverColorVector;
+            IColor hoverColor = ((IHoverable)element).getHoverColor();
+            if (hoverColor != null) {
+            	hoverColorVector = hoverColor.getColorVector();
+            } else {
+            	hoverColorVector = new Vector4f(0, 0, 0, 0);
+            }
+            
+            debugUIElement.getShader().setUniform("hoverColor", hoverColorVector);
+            debugUIElement.getShader().setUniform("hoverIntensity", 0.1f);
         } else {
             debugUIElement.getShader().setUniform("hoverColor", new Vector4f(0, 0, 0, 0));
             debugUIElement.getShader().setUniform("hoverIntensity", 0.0f);
@@ -76,7 +103,7 @@ public class UIElementRenderer {
 		 * indices: Задает смещение, которое необходимо применить к данным индексов для начала рендеринга.
 		 */
 		glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
-		
+
 		// На самом деле разбинживать меш вовсе не обязательно, но я так хочу
 		debugUIElement.getMesh().unbind();
 

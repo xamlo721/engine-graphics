@@ -37,6 +37,8 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 		objectShader.bind();
 		try {
 			objectShader.createUniform("mvp");
+            objectShader.createUniform("useTexture");
+            objectShader.createUniform("backgroundColor"); 
             objectShader.createUniform("hoverColor");
             objectShader.createUniform("hoverIntensity");
 			objectShader.createUniform("texture_sampler");
