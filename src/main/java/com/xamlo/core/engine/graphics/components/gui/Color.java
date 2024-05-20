@@ -44,7 +44,7 @@ public class Color implements IColor {
 
 	@Override
 	public Vector4f getColorVector() {
-		return new Vector4f(this.red, this.green, this.blue, this.alpha);
+		return new Vector4f(this.red/255.0f, this.green/255.0f, this.blue/255.0f, this.alpha/255.0f);
 	}
     
 }
