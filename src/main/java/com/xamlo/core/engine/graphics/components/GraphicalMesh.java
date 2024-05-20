@@ -29,7 +29,7 @@ public class GraphicalMesh extends PhysicalMesh {
     public GraphicalMesh(IVertex[] vertices, IVertexStructure structure, int[] indices) {
     	super(0);
 
-		System.out.println("Register Mesh VertexCount: " + structure.getVertexCount() + ". VertexSize " + structure.getVertexSize());
+		//System.out.println("Register Mesh VertexCount: " + structure.getVertexCount() + ". VertexSize " + structure.getVertexSize());
 		
 	    FloatBuffer vertexData = MemoryUtil.memAllocFloat(structure.getVertexCount() * structure.getVertexSize());
 	    
