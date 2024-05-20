@@ -63,6 +63,10 @@ public class OpenGLBlend {
 		GL11.glEnable(GL_BLEND);
 	}
 	
+	public static void disable() {
+		GL11.glDisable(GL_BLEND);
+    }
+	
 	/**
 	 * При наложении текстуры друг на друга, можно задать разные режимы работы смешивания альфа канала
 	 * 
