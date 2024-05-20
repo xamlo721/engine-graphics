@@ -42,4 +42,7 @@ public abstract class AbstractTexture implements ITextureResource<String> {
 		return height;
 	}
 
+    public int getTextureID() {
+        return glTextureID;
+    }
 }

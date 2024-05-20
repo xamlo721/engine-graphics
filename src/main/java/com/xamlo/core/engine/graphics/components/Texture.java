@@ -34,11 +34,15 @@ public class Texture extends AbstractTexture {
     }
 
     private void generateImage() {
+    	
         glTextureID = glGenTextures();
+        
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, glTextureID);
+        
         //Указываем сколько байт использовалось для одного пикселя
         //R(8)+G(8)+B(8)+A(8) => 32bit => 1 int
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        
         /*
          * Этот параметр в основном говорит о том, что когда пиксель рисуется без
          * прямой однозначной привязки к текстурной координате, он выбирает ближайшую
@@ -46,6 +50,7 @@ public class Texture extends AbstractTexture {
          */
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        
         /*
          * target - Тип текстуры, обычно GL_TEXTURE_2D
          *
@@ -69,10 +74,12 @@ public class Texture extends AbstractTexture {
          * data - буфер, где лежит текстура
          */
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureBuffer);
+        
         /*
          * Разрешить видеокарте сгенерировать mipmap для текстуры
          */
         glGenerateMipmap(GL_TEXTURE_2D);
+        
 
         stbi_image_free(textureBuffer);
         textureBuffer = null;
@@ -86,12 +93,4 @@ public class Texture extends AbstractTexture {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
     }
 
-    /**
-     * Возвращает идентификатор текстуры OpenGL.
-     *
-     * @return идентификатор текстуры OpenGL
-     */
-    public int getTextureID() {
-        return glTextureID;
-    }
 }
