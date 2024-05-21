@@ -215,7 +215,7 @@ public class RenderEngine implements IRenderEngine {
 
         
 		// Вся логическая сцена
-        renderer.render(scene);
+        renderer.renderScene(scene);
 		
 
 		//camera.setFov(camera.getFov() + 0.01f);
