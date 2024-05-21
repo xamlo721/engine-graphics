@@ -13,6 +13,15 @@ import com.xamlo.core.engine.graphics.components.AbstractRenderableObject;
 
 public class SceneElementRenderer {
 
+	public void init() {
+
+	}
+	
+	public void release() {
+		
+	}
+
+	
 	
 	public void draw(AbstractRenderableObject obj, IScene scene) {
 		

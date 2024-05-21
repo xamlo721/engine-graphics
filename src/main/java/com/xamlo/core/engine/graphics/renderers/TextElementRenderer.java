@@ -37,7 +37,26 @@ public class TextElementRenderer {
     private ShaderProgram textShader;
 	private Matrix4f mvpMatrix;
 	
-	public void initFonts() {
+
+	AbstractUIElement debugUIElement;
+	
+	public void init() {
+		
+		this.debugUIElement = new AbstractUIElement() {
+			//NO-OP DEBUG
+		};
+        debugUIElement.init();
+        
+        this.initFonts();
+        
+	}
+	
+	public void release() {
+		debugUIElement.release();		
+	}
+
+	
+	private void initFonts() {
 		
 		mvpMatrix = new Matrix4f();
         
@@ -57,9 +76,6 @@ public class TextElementRenderer {
 			e.printStackTrace();
 			this.custom = new UnicodeGlyphFont(new Font("Times New Roman", Font.PLAIN, 30));
 		}
-
-		
-        
     	
         GlyphPage glyphPage = this.custom.getGlyphPage('A');
         
@@ -71,7 +87,7 @@ public class TextElementRenderer {
     }
 
 	
-	public void draw(AbstractUIElement debugUIElement, IUIElement element, IScene scene) {
+	public void draw(IUIElement element, IScene scene) {
 		
 	    if (element.getWidgetName() == null || element.getWidgetName().isEmpty()) {
 	        return;
@@ -79,7 +95,6 @@ public class TextElementRenderer {
 	    
 	    String text = element.getWidgetName();
 	
-	    
 	    this.textShader = debugUIElement.getShader();
 	
 	    UIElementGeometry geometry = ((IResizable)element).getGeometry();

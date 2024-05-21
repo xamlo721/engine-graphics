@@ -29,7 +29,6 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 	@Override
 	public void init() {
 
-
 		objectShader = new ShaderProgram();
 		objectShader.addVertexShader(vertexShaderSource.getShaderProgram());
 		objectShader.addFragmentShader(fragmentShaderSource.getShaderProgram());

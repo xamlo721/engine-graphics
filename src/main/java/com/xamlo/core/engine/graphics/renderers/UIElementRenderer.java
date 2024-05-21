@@ -24,7 +24,21 @@ public class UIElementRenderer {
 	
 	private Matrix4f mvpMatrix = new Matrix4f();
 	
-	public void draw(AbstractUIElement debugUIElement, IUIElement element, IScene scene) {
+	AbstractUIElement debugUIElement;
+	
+	public void init() {
+		this.debugUIElement = new AbstractUIElement() {
+			//NO-OP DEBUG
+		};
+        debugUIElement.init();
+	}
+	
+	public void release() {
+		debugUIElement.release();		
+	}
+
+	
+	public void draw(IUIElement element, IScene scene) {
 		
 		if (!(element instanceof IResizable)) {
 			return;

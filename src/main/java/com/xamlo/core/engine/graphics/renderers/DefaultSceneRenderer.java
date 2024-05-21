@@ -14,10 +14,7 @@ import com.xamlo.core.engine.graphics.opengl.depth.OpenGLDepth;
 import com.xamlo.engine.api.resources.IResourceLoader;
 
 public class DefaultSceneRenderer implements ISceneRenderer {
-	
-	AbstractUIElement debugUIElement = new AbstractUIElement() {
-		//NO-OP DEBUG
-	};
+
 	
 	private UIElementRenderer uiRenderer;
 	private TextElementRenderer textRenderer;
@@ -41,9 +38,10 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		OpenGLDepth.enable();
         OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
         
-        debugUIElement.init();
-        textRenderer.initFonts();
-        
+        uiRenderer.init();
+        textRenderer.init();
+        elementRenderer.init();
+
         // clear the framebuffer
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
@@ -66,8 +64,8 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		}
 		
 		for (IUIElement element : scene.getGuiElements()) {
-			uiRenderer.draw(debugUIElement, element, scene);
-			textRenderer.draw(debugUIElement, element, scene);
+			uiRenderer.draw(element, scene);
+			textRenderer.draw(element, scene);
 		}
 
 	}
@@ -75,7 +73,11 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 
 	@Override
 	public void cleanup() {
-		debugUIElement.release();		
+
+        uiRenderer.release();
+        textRenderer.release();
+        elementRenderer.release();
+        	
 	}
 
 	
