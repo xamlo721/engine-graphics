@@ -5,7 +5,6 @@ import static org.lwjgl.opengl.GL11.glClearColor;
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
 import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
-import com.xamlo.core.engine.graphics.api.gui.AbstractUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;

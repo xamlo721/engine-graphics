@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.xamlo.core.engine.graphics.api.gui.IColor;
-import com.xamlo.core.engine.graphics.api.gui.IFont;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.elements.IWidget;
+import com.xamlo.core.engine.graphics.api.gui.font.IFont;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
+import com.xamlo.core.engine.graphics.font.ApplicationFont;
 
 public class Widget implements IWidget {
 	
@@ -36,7 +37,7 @@ public class Widget implements IWidget {
 		this.isEnable = true;
 		this.focusable = false;
 		this.backgroundColor = new Color(255, 255, 255);
-		this.font = new Font("Default", 12, false, false);
+		this.font = new ApplicationFont("Default", 12, false, false);
 		this.toolTipText = "";
 		this.border = new Border(4, new Color(128, 128, 128));
 		
@@ -52,7 +53,7 @@ public class Widget implements IWidget {
 		this.isEnable = true;
 		this.focusable = false;
 		this.backgroundColor = new Color(255, 255, 255);
-		this.font = new Font("Default", 12, false, false);
+		this.font = new ApplicationFont("Default", 12, false, false);
 		this.toolTipText = "";
 		this.border = new Border(4, new Color(128, 128, 128));
 		

@@ -2,8 +2,8 @@ package com.xamlo.core.engine.graphics.api.gui.elements;
 
 import com.xamlo.core.engine.graphics.api.gui.IActivatable;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
-import com.xamlo.core.engine.graphics.api.gui.IFont;
-import com.xamlo.core.engine.graphics.api.gui.IFontSupport;
+import com.xamlo.core.engine.graphics.api.gui.font.IFont;
+import com.xamlo.core.engine.graphics.api.gui.font.IFontSupport;
 
 public interface ILabel extends IWidget, 
 								IFontSupport,

@@ -2,9 +2,13 @@ package com.xamlo.core.engine.graphics.font;
 
 import java.util.Map;
 
-public class GlyphPage {
+import com.xamlo.engine.api.font.IGlyphPage;
+import com.xamlo.engine.api.resources.ITextureResource;
 
-    private final FontTexture texture;
+
+public class GlyphPage implements IGlyphPage {
+
+    private final ITextureResource<String> texture;
     private final int maxHeight;
     private final Map<Integer, CharacterData> characterRegistry;
 
@@ -14,15 +18,18 @@ public class GlyphPage {
         this.characterRegistry = characterRegistry;
     }
 
-    public FontTexture getTexture() {
+    @Override
+	public ITextureResource<String> getTexture() {
         return texture;
     }
 
-    public int getMaxHeight() {
+    @Override
+	public int getMaxHeight() {
         return maxHeight;
     }
 
-    public CharacterData getCharacterData(char c) {
+    @Override
+	public CharacterData getCharacterData(char c) {
         return characterRegistry.get((int) c);
     }
     

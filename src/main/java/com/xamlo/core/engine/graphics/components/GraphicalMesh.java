@@ -4,6 +4,7 @@ import java.nio.FloatBuffer;
 
 import org.lwjgl.system.MemoryUtil;
 
+import com.xamlo.core.engine.graphics.api.primitives.IGraphicalMesh;
 import com.xamlo.core.engine.graphics.primitives.EnumMemoryType;
 import com.xamlo.core.engine.graphics.primitives.Vertex;
 import com.xamlo.core.engine.graphics.primitives.VertexArrayObject;
@@ -13,7 +14,7 @@ import com.xamlo.engine.api.resources.IVertexStructure;
 
 import ru.satomi.dc.primitive.PhysicalMesh;
 
-public class GraphicalMesh extends PhysicalMesh {
+public class GraphicalMesh extends PhysicalMesh implements IGraphicalMesh {
 	
 
     //Объект, хранящий в себе копию памяти VRAM
@@ -61,15 +62,18 @@ public class GraphicalMesh extends PhysicalMesh {
         //this.verticesCount = indices.length;
     }
     
-    public void bind() {
+    @Override
+	public void bind() {
     	vao.bind();
     }
     
-    public void unbind() {
+    @Override
+	public void unbind() {
     	vao.unbind();
     }
 
-    public void cleanup() {
+    @Override
+	public void cleanup() {
         vao.releaseMemory();
     }
 

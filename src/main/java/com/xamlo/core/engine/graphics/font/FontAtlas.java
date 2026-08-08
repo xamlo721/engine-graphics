@@ -11,9 +11,11 @@ import com.xamlo.core.engine.graphics.components.attribs.PositionAttribute;
 import com.xamlo.core.engine.graphics.components.attribs.TexCoordAttribute;
 import com.xamlo.core.engine.graphics.primitives.Vertex;
 import com.xamlo.core.engine.graphics.primitives.VertexStructure;
+import com.xamlo.engine.api.font.IFontAtlas;
+import com.xamlo.engine.api.resources.IFontResource;
 import com.xamlo.engine.api.resources.IVertex;
 
-public class FontAtlas {
+public class FontAtlas implements IFontAtlas {
 	
 	private Map<Character, GraphicalMesh> glyphModels;
 	
@@ -34,11 +36,13 @@ public class FontAtlas {
 		this.generateAtlasModels(font);
 	}
 	
+	@Override
 	public GraphicalMesh getGlyphMesh(char c) {
 		return this.glyphModels.get(c);
 	}
-	
-	public void generateAtlasModels(UnicodeGlyphFont font) {
+
+	@Override
+	public void generateAtlasModels(IFontResource<String> font) {
 		
 		String text = "!\"#$%&'()*+,-./0"
 				+ "123456789:;<=>?@ABCDEFGHILJKLM"
@@ -56,7 +60,7 @@ public class FontAtlas {
 		
 	}
 	
-	private static GraphicalMesh createCharMesh(UnicodeGlyphFont font,  char character) {
+	private static GraphicalMesh createCharMesh(IFontResource<String> font,  char character) {
     	
         GlyphPage glyphPage = font.getGlyphPage(character);
         

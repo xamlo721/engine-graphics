@@ -1,4 +1,4 @@
-package com.xamlo.core.engine.graphics.api.gui;
+package com.xamlo.core.engine.graphics.api.gui.font;
 
 public interface IFontSupport {
 

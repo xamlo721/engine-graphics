@@ -7,9 +7,6 @@ import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 import static org.lwjgl.opengl.GL13.glActiveTexture;
 
 import java.awt.Font;
-import java.awt.FontFormatException;
-import java.io.File;
-import java.io.IOException;
 
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -27,6 +24,8 @@ import com.xamlo.core.engine.graphics.font.CharacterData;
 import com.xamlo.core.engine.graphics.font.FontAtlas;
 import com.xamlo.core.engine.graphics.font.GlyphPage;
 import com.xamlo.core.engine.graphics.font.UnicodeGlyphFont;
+import com.xamlo.core.engine.graphics.fontsystem.FontKey;
+import com.xamlo.core.engine.graphics.fontsystem.FontSystem;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
 
@@ -37,6 +36,7 @@ public class TextElementRenderer {
     private ShaderProgram textShader;
 	private Matrix4f mvpMatrix;
 	
+    private FontSystem fontSystem;
 
 	AbstractUIElement debugUIElement;
 	
@@ -47,6 +47,8 @@ public class TextElementRenderer {
 		};
         debugUIElement.init();
         
+        this.fontSystem = FontSystem.getInstance();
+
         this.initFonts();
         
 	}
@@ -60,39 +62,39 @@ public class TextElementRenderer {
 		
 		mvpMatrix = new Matrix4f();
         
-		File fontFile = new File("C:\\workspace\\eclipse\\gamedev\\engine-graphics\\src\\main\\resources\\fonts\\Roboto-Bold.ttf");
-        Font baseFont;
-		try {
-			
-			baseFont = Font.createFont(Font.TRUETYPE_FONT, fontFile);
-			baseFont = baseFont.deriveFont(24f);
-			this.custom = new UnicodeGlyphFont(baseFont);
-
-            
-		} catch (FontFormatException e) {
-			e.printStackTrace();
-			this.custom = new UnicodeGlyphFont(new Font("Times New Roman", Font.PLAIN, 30));
-		} catch (IOException e) {
-			e.printStackTrace();
-			this.custom = new UnicodeGlyphFont(new Font("Times New Roman", Font.PLAIN, 30));
-		}
-    	
-        GlyphPage glyphPage = this.custom.getGlyphPage('A');
         
-        CharacterData characterData = glyphPage.getCharacterData('A');
-        
-        System.out.println("size A: " +  characterData.getWidth() + "|" + characterData.getHeight());
+        // Register fonts through FontSystem
+        FontKey fontKey = new FontKey("Arial", 12, false, false);
+        if (!fontSystem.isFontRegistered(fontKey)) {
+            Font awtFont = new Font("Arial", Font.PLAIN, 12);
+            this.custom = fontSystem.registerFont(fontKey, awtFont);
+        } else {
+            this.custom = fontSystem.getFont(fontKey);
+        }
         
 		this.atlas = new FontAtlas(this.custom);
     }
 
-	
+    private FontKey determineFontKey(IUIElement element) {
+        // Extract font properties from UI element
+        // This is a placeholder - implement based on your UI element structure
+        String fontFamily = "Arial"; // Get from element if available
+        int fontSize = 12; // Get from element if available
+        boolean bold = false; // Get from element if available
+        boolean italic = false; // Get from element if available
+        
+        return new FontKey(fontFamily, fontSize, bold, italic);
+    }
+    
 	public void draw(IUIElement element, IScene scene) {
 		
 	    if (element.getWidgetName() == null || element.getWidgetName().isEmpty()) {
 	        return;
 	    }
-	    
+        // Get font from FontSystem based on element's font properties
+        FontKey fontKey = determineFontKey(element);
+        UnicodeGlyphFont font = fontSystem.getFont(fontKey);
+        
 	    String text = element.getWidgetName();
 	
 	    this.textShader = debugUIElement.getShader();

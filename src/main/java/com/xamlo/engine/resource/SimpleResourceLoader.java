@@ -5,11 +5,12 @@ import com.xamlo.core.engine.graphics.components.Texture;
 import com.xamlo.core.engine.graphics.components.attribs.NormalAttribute;
 import com.xamlo.core.engine.graphics.components.attribs.PositionAttribute;
 import com.xamlo.core.engine.graphics.components.attribs.TexCoordAttribute;
+import com.xamlo.core.engine.graphics.components.gui.FontResource;
 import com.xamlo.core.engine.graphics.primitives.Vertex;
 import com.xamlo.core.engine.graphics.primitives.VertexStructure;
 import com.xamlo.engine.api.resources.IShaderResource;
 import com.xamlo.engine.api.resources.IVertex;
-
+import com.xamlo.engine.api.resources.IFontResource;
 import com.xamlo.engine.api.resources.IModelResource;
 import com.xamlo.engine.api.resources.IResourceLoader;
 
@@ -17,6 +18,8 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 
+import java.awt.Font;
+import java.awt.FontFormatException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -290,6 +293,24 @@ public class SimpleResourceLoader implements IResourceLoader<String> {
             default -> throw new IllegalStateException("Unexpected value: " + uri.getScheme());
         };
     }
+
+	@Override
+	public IFontResource<String> loadFont(String identifier) {
+		
+        URI resourceUri = getResourceUriByIdentifier(identifier).orElseThrow();
+        
+        try (InputStream is = getResourceStream(resourceUri);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+            Font baseFont = Font.createFont(Font.TRUETYPE_FONT, is);
+			baseFont = baseFont.deriveFont(24f);
+			return new FontResource(identifier, baseFont);
+        } catch (FontFormatException e) {
+            throw new RuntimeException(e);
+		} catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    	
+	}
 
 
 }
