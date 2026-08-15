@@ -116,9 +116,8 @@ public class SimpleResourceLoader implements IResourceLoader<String> {
         URI resourceUri = getResourceUriByIdentifier(identifier).orElseThrow();
         try (InputStream is = getResourceStream(resourceUri);
             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
-            
-        	System.out.println("loading model....");
-        	List<Vector3f> positions = new ArrayList<>();
+
+        List<Vector3f> positions = new ArrayList<>();
         	List<Vector2f> texCoords = new ArrayList<>();
         	List<Vector3f> normals = new ArrayList<>();
         	List<Face> faces = new ArrayList<>();
@@ -152,10 +151,9 @@ public class SimpleResourceLoader implements IResourceLoader<String> {
         			faces.add(new Face(line.substring(2).trim()));
         		}
 
-        	}
-        	System.out.println("sucessfull!");
+        }
 
-        	return createModelFromObjData(identifier, positions, texCoords, normals, faces);
+        return createModelFromObjData(identifier, positions, texCoords, normals, faces);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

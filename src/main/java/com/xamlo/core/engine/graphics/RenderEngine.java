@@ -148,8 +148,6 @@ public class RenderEngine implements IRenderEngine {
 	@Override
 	public void stop() {
 		
-		System.out.println("stop rendering");
-		
 		if(!isRendering) {
 			return;
 		}
@@ -284,7 +282,4 @@ public class RenderEngine implements IRenderEngine {
 
 		System.out.println("GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS " + GL11.glGetInteger(GL43.GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS));
 	}
-
-
-
 }

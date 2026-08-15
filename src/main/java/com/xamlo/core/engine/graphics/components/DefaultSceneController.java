@@ -105,29 +105,23 @@ public class DefaultSceneController implements ISceneController {
 				break;
 			}
 			case MOUSE_BUTTON_2: {
-				System.out.println("MOUSE 2 CLICK!");
 				break;
 			}
 			case MOUSE_BUTTON_3: {
-				System.out.println("MOUSE 3 CLICK!");
 				break;
 			}
 			case MOUSE_BUTTON_4: {
-				System.out.println("MOUSE 4 CLICK!");
 				this.inHUDMode = true;
 				break;
 			}
 			case MOUSE_BUTTON_5: {
-				System.out.println("MOUSE 5 CLICK!");
 				this.inHUDMode = false;
 				break;
 			}
 			case MOUSE_BUTTON_6: {
-				System.out.println("MOUSE 6 CLICK!");
 				break;
 			}
 			case MOUSE_BUTTON_7: {
-				System.out.println("MOUSE 7 CLICK!");
 				break;
 			}
 			default: {

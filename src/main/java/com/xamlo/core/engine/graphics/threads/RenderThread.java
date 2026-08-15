@@ -70,9 +70,6 @@ public class RenderThread extends Thread {
 				fps = frames;
 				frames = 0;
 				secondsForFpsCounter +=currentDelta;
-				System.out.println(Thread.currentThread().getName() + " " + idleTime );
-				System.out.println(Thread.currentThread().getName() + " " + fps );
-
 			}
 			
 			//Если с времени последнего кадра прошло времени больше чем время кадра, то пора рисовать следующий

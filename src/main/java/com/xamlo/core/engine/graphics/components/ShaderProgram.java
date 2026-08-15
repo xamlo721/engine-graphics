@@ -50,7 +50,6 @@ public class ShaderProgram {
 		tessellationControlShaderID = 0;
 		tesselationEvaluationShaderID = 0;
 		computeShaderID = 0;
-		System.out.println("Register Shader program id: " + program);
 
 	}
 	
@@ -105,7 +104,6 @@ public class ShaderProgram {
 	private int addProgram(String text, int type) {
 		
 		int shader = glCreateShader(type);
-		System.out.println("Register Shader part id : " + shader);
 
 		if (shader == 0) {
 			System.err.println(this.getClass().getName() + " Shader creation failed");
@@ -141,7 +139,7 @@ public class ShaderProgram {
 		glLinkProgram(program);
 
 		if(glGetProgrami(program, GL_LINK_STATUS) == 0) {
-			System.out.println(this.getClass().getName() + " " + glGetProgramInfoLog(program, 1024));
+			System.err.println(this.getClass().getName() + " " + glGetProgramInfoLog(program, 1024));
 			System.exit(1);
 		}
 		
@@ -170,9 +168,6 @@ public class ShaderProgram {
 			System.err.println(this.getClass().getName() +  " " + glGetProgramInfoLog(program, 1024));
 			System.exit(1);
 		}
-		
-		System.out.println("Compile Shader program id: " + program);
-
 	}
 	
 

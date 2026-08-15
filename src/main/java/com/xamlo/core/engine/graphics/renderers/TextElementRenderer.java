@@ -227,13 +227,9 @@ public class TextElementRenderer {
 		mvpMatrix.zero()
 				.setOrtho(left, right, bottom, top, near, far)
 				.translate(Tx, Ty, Tz)
-				.scale(characterData.getWidth(), -characterData.getHeight(), 1.0f);
+		.scale(characterData.getWidth(), -characterData.getHeight(), 1.0f);
 	
-	    System.out.println("render glyph: " + character + ", "
-	    		+ "\t pos: (" + xCoord + ": " + yCoord + "),"
-	            + "\t size: " + characterData.getWidth() + "\t" +(int)  characterData.getHeight());
-	    
-	    textShader.setUniform("mvp", mvpMatrix);
+    textShader.setUniform("mvp", mvpMatrix);
 		
 	    mesh.bind();
 	

@@ -80,12 +80,6 @@ public class FontAtlas implements IFontAtlas {
     	IVertex v3 = new Vertex(5).append(new Vector3f( 1,  0,  0.0f)).append(new Vector2f(texX + texW, texY + texH));        //V3
     	IVertex v4 = new Vertex(5).append(new Vector3f( 1,  1,  0.0f)).append(new Vector2f(texX + texW, texY)); //V4
 		
-        System.out.println("Register glyph: " + character + ", "
-        		+ "\t pos: (" + (int) x + ": " + (int) y + "),"
-                + "\t size: " + (int) w + "x" +(int)  h +
-                "),\t texture start [" +  x + ":" +  y + "]" +
-                "  \t stop [" +(int) (x + w) + ":" + (int) (y + h) + "]");
-    	
     	IVertex[] vertices = new Vertex[4];
     	vertices[0] = v1;
     	vertices[1] = v2;

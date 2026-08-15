@@ -84,7 +84,6 @@ public class GlyphGenerator {
         try {
             File outputFile = new File(filename);
             ImageIO.write(image, "PNG", outputFile);
-            System.out.println("Texture atlas saved as: " + outputFile.getAbsolutePath());
         } catch (IOException e) {
             System.err.println("Couldnt save texture atlas: " + e.getMessage());
         }
