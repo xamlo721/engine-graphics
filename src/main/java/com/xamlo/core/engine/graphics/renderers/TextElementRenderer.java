@@ -46,6 +46,15 @@ public class TextElementRenderer {
     static final ApplicationFont DEFAULT_FONT_KEY = new ApplicationFont("Arial", 12, false, false);
     private final Map<String, GlyphSet> glyphSets = new HashMap<>();
     private GlyphSet defaultGlyphSet;
+    private boolean debugWidgetNames = false;
+
+    public void setDebugWidgetNames(boolean enabled) {
+    	this.debugWidgetNames = enabled;
+    }
+
+    public boolean isDebugWidgetNames() {
+    	return this.debugWidgetNames;
+    }
 
     AbstractUIElement debugUIElement;
 
@@ -135,7 +144,12 @@ public class TextElementRenderer {
 	public void draw(IUIElement element, IScene scene) {
 		
 
-	    String text = (element instanceof ILabel) ? ((ILabel) element).getText() : null;
+        String text;
+        if (debugWidgetNames) {
+        	text = element.getWidgetName();
+        } else {
+        	text = (element instanceof ILabel) ? ((ILabel) element).getText() : null;
+        }
         if (text == null || text.isEmpty()) {
             return;
         }

@@ -25,6 +25,14 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		this.elementRenderer = new SceneElementRenderer();
 	}
 
+	public void setDebugWidgetNames(boolean enabled) {
+		textRenderer.setDebugWidgetNames(enabled);
+	}
+
+	public boolean isDebugWidgetNames() {
+		return textRenderer.isDebugWidgetNames();
+	}
+
 	@Override
 	public void init() {
         //Рисовать рамку или заливать цветом - закомментировать, если хотим цвет
