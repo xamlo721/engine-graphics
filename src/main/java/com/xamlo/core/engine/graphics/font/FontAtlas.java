@@ -12,6 +12,7 @@ import com.xamlo.core.engine.graphics.components.attribs.TexCoordAttribute;
 import com.xamlo.core.engine.graphics.primitives.Vertex;
 import com.xamlo.core.engine.graphics.primitives.VertexStructure;
 import com.xamlo.engine.api.font.IFontAtlas;
+import com.xamlo.engine.api.font.IGlyphPage;
 import com.xamlo.engine.api.resources.IFontResource;
 import com.xamlo.engine.api.resources.IVertex;
 
@@ -62,7 +63,7 @@ public class FontAtlas implements IFontAtlas {
 	
 	private static GraphicalMesh createCharMesh(IFontResource<String> font,  char character) {
     	
-        GlyphPage glyphPage = font.getGlyphPage(character);
+        IGlyphPage glyphPage = font.getGlyphPage(character);
         
         CharacterData characterData = glyphPage.getCharacterData(character);
 

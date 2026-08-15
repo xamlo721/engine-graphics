@@ -23,8 +23,8 @@ import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 import com.xamlo.core.engine.graphics.font.CharacterData;
 import com.xamlo.core.engine.graphics.font.FontAtlas;
 import com.xamlo.core.engine.graphics.font.GlyphPage;
+import com.xamlo.core.engine.graphics.font.ApplicationFont;
 import com.xamlo.core.engine.graphics.font.UnicodeGlyphFont;
-import com.xamlo.core.engine.graphics.fontsystem.FontKey;
 import com.xamlo.core.engine.graphics.fontsystem.FontSystem;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
@@ -64,7 +64,7 @@ public class TextElementRenderer {
         
         
         // Register fonts through FontSystem
-        FontKey fontKey = new FontKey("Arial", 12, false, false);
+        ApplicationFont fontKey = new ApplicationFont("Arial", 12, false, false);
         if (!fontSystem.isFontRegistered(fontKey)) {
             Font awtFont = new Font("Arial", Font.PLAIN, 12);
             this.custom = fontSystem.registerFont(fontKey, awtFont);
@@ -75,7 +75,7 @@ public class TextElementRenderer {
 		this.atlas = new FontAtlas(this.custom);
     }
 
-    private FontKey determineFontKey(IUIElement element) {
+    private ApplicationFont determineFontKey(IUIElement element) {
         // Extract font properties from UI element
         // This is a placeholder - implement based on your UI element structure
         String fontFamily = "Arial"; // Get from element if available
@@ -83,7 +83,7 @@ public class TextElementRenderer {
         boolean bold = false; // Get from element if available
         boolean italic = false; // Get from element if available
         
-        return new FontKey(fontFamily, fontSize, bold, italic);
+        return new ApplicationFont(fontFamily, fontSize, bold, italic);
     }
     
 	public void draw(IUIElement element, IScene scene) {
@@ -92,7 +92,7 @@ public class TextElementRenderer {
 	        return;
 	    }
         // Get font from FontSystem based on element's font properties
-        FontKey fontKey = determineFontKey(element);
+        ApplicationFont fontKey = determineFontKey(element);
         UnicodeGlyphFont font = fontSystem.getFont(fontKey);
         
 	    String text = element.getWidgetName();

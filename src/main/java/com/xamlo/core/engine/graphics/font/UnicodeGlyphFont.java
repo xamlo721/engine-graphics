@@ -6,6 +6,7 @@ import java.util.Map;
 
 
 import com.xamlo.core.engine.graphics.fontsystem.GlyphGenerator;
+import com.xamlo.engine.api.font.IFontAtlas;
 import com.xamlo.engine.api.resources.IFontResource;
 
 public class UnicodeGlyphFont implements IFontResource<String> {
@@ -17,6 +18,7 @@ public class UnicodeGlyphFont implements IFontResource<String> {
     private final int MARGIN;
     private final int spacing;
     private String identifier;
+    private IFontAtlas fontAtlas;
 
     /**
      * Construct a glyph font with specified font
@@ -66,6 +68,14 @@ public class UnicodeGlyphFont implements IFontResource<String> {
 		return identifier;
 	}
 
+
+    @Override
+    public IFontAtlas getFontAtlas() {
+        if (fontAtlas == null) {
+            fontAtlas = new FontAtlas(this);
+        }
+        return fontAtlas;
+    }
 
     /**
      * Returns the width of the specified string if drawn to the screen
