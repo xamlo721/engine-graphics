@@ -17,8 +17,9 @@ import com.xamlo.engine.api.resources.IFontResource;
 import com.xamlo.engine.api.resources.IVertex;
 
 public class FontAtlas implements IFontAtlas {
-	
-	private Map<Character, GraphicalMesh> glyphModels;
+
+ 	private final UnicodeGlyphFont fontSource;
+ 	private Map<Character, GraphicalMesh> glyphModels;
 	
 	private static int[] indices = {
 			0, 1, 3,
@@ -33,32 +34,29 @@ public class FontAtlas implements IFontAtlas {
 	}
 	
 	public FontAtlas(UnicodeGlyphFont font) {
+		this.fontSource = font;
 		this.glyphModels = new HashMap<Character, GraphicalMesh>();
 		this.generateAtlasModels(font);
 	}
-	
+
 	@Override
 	public GraphicalMesh getGlyphMesh(char c) {
-		return this.glyphModels.get(c);
-	}
+    	GraphicalMesh mesh = this.glyphModels.get(c);
+        if (mesh == null && this.fontSource != null) {
+        	mesh = createCharMesh(this.fontSource, c);
+            this.glyphModels.put(c, mesh);
+        }
+        return mesh;
+    }
 
 	@Override
 	public void generateAtlasModels(IFontResource<String> font) {
-		
-		String text = "!\"#$%&'()*+,-./0"
-				+ "123456789:;<=>?@ABCDEFGHILJKLM"
-				+ "NOPQRSTUVWXYZ[\\]^_`abcdefghijkl"
-				+ "mnopqrstuvwxyz{|}~";
-		
-		for (int i = 0; i < text.length(); i++) {
-			
-			final char symbol = text.charAt(i);
-			
-			GraphicalMesh symbolMesh = createCharMesh(font, symbol);
-			
-			this.glyphModels.put(symbol, symbolMesh);
+
+		for (char symbol = 32; symbol < 128; symbol++) {
+
+			this.glyphModels.put(symbol, createCharMesh(font, symbol));
 		}
-		
+
 	}
 	
 	private static GraphicalMesh createCharMesh(IFontResource<String> font,  char character) {
