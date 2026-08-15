@@ -7,6 +7,8 @@ import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 import static org.lwjgl.opengl.GL13.glActiveTexture;
 
 import java.awt.Font;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -17,6 +19,9 @@ import com.xamlo.core.engine.graphics.api.gui.IBackgroundSupport;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
+import com.xamlo.core.engine.graphics.api.gui.elements.ILabel;
+import com.xamlo.core.engine.graphics.api.gui.font.IFont;
+import com.xamlo.core.engine.graphics.api.gui.font.IFontSupport;
 import com.xamlo.core.engine.graphics.components.GraphicalMesh;
 import com.xamlo.core.engine.graphics.components.ShaderProgram;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
@@ -38,7 +43,21 @@ public class TextElementRenderer {
 	
     private FontSystem fontSystem;
 
-	AbstractUIElement debugUIElement;
+    static final ApplicationFont DEFAULT_FONT_KEY = new ApplicationFont("Arial", 12, false, false);
+    private final Map<String, GlyphSet> glyphSets = new HashMap<>();
+    private GlyphSet defaultGlyphSet;
+
+    AbstractUIElement debugUIElement;
+
+    private static final class GlyphSet {
+        final UnicodeGlyphFont font;
+        final FontAtlas atlas;
+
+        GlyphSet(UnicodeGlyphFont font, FontAtlas atlas) {
+            this.font = font;
+            this.atlas = atlas;
+        }
+    }
 	
 	public void init() {
 		
@@ -73,31 +92,56 @@ public class TextElementRenderer {
         }
         
 		this.atlas = new FontAtlas(this.custom);
+        this.defaultGlyphSet = new GlyphSet(this.custom, this.atlas);
+        glyphSets.put(describe(fontKey), defaultGlyphSet);
+    }
+
+    private UnicodeGlyphFont ensureFont(ApplicationFont key) {
+    	if (!fontSystem.isFontRegistered(key)) {
+            int style = Font.PLAIN | (key.isBold() ? Font.BOLD : 0) | (key.isItalic() ? Font.ITALIC : 0);
+            return fontSystem.registerFont(key, new Font(key.getFontFamily(), style, key.getFontSize()));
+        }
+        return fontSystem.getFont(key);
+    }
+
+    private GlyphSet resolveGlyphSet(IUIElement element) {
+    	ApplicationFont key = determineFontKey(element);
+        String id = describe(key);
+        GlyphSet set = glyphSets.get(id);
+        if (set == null) {
+        	UnicodeGlyphFont font = ensureFont(key);
+            if (font == null) {
+                set = defaultGlyphSet;
+            } else {
+                set = new GlyphSet(font, new FontAtlas(font));
+                glyphSets.put(id, set);
+            }
+        }
+        return set;
+    }
+
+    private static String describe(ApplicationFont key) {
+    	return key.getFontFamily() + "|" + key.getFontSize() + "|" + key.isBold() + "|" + key.isItalic();
     }
 
     private ApplicationFont determineFontKey(IUIElement element) {
-        // Extract font properties from UI element
-        // This is a placeholder - implement based on your UI element structure
-        String fontFamily = "Arial"; // Get from element if available
-        int fontSize = 12; // Get from element if available
-        boolean bold = false; // Get from element if available
-        boolean italic = false; // Get from element if available
-        
-        return new ApplicationFont(fontFamily, fontSize, bold, italic);
+        IFont font = (element instanceof IFontSupport) ? ((IFontSupport) element).getFont() : null;
+        if (font == null || font.getFontFamily() == null) {
+            return DEFAULT_FONT_KEY;
+        }
+        return new ApplicationFont(font.getFontFamily(), font.getFontSize(), font.isBold(), font.isItalic());
     }
     
 	public void draw(IUIElement element, IScene scene) {
 		
-	    if (element.getWidgetName() == null || element.getWidgetName().isEmpty()) {
-	        return;
-	    }
-        // Get font from FontSystem based on element's font properties
-        ApplicationFont fontKey = determineFontKey(element);
-        UnicodeGlyphFont font = fontSystem.getFont(fontKey);
-        
-	    String text = element.getWidgetName();
-	
-	    this.textShader = debugUIElement.getShader();
+
+	    String text = (element instanceof ILabel) ? ((ILabel) element).getText() : null;
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        GlyphSet glyphSet = resolveGlyphSet(element);
+ 	
+ 	    this.textShader = debugUIElement.getShader();
 	
 	    UIElementGeometry geometry = ((IResizable)element).getGeometry();
 		
@@ -134,7 +178,7 @@ public class TextElementRenderer {
 	    float width = 0;
 	    
 	    for (char c : text.toCharArray()) {
-	        float size = drawCharacter(this.custom, c, xCoord + width, yCoord, screenWidth, screenHeight);
+	        float size = drawCharacter(glyphSet, c, xCoord + width, yCoord, screenWidth, screenHeight);
 	        width += size;
 	    }
 	    
@@ -144,13 +188,14 @@ public class TextElementRenderer {
 	    
 	}
 	
-	private float drawCharacter(UnicodeGlyphFont font, char character, float xCoord, float yCoord, final float screenWidth, final float screenHeight) {
+	private float drawCharacter(GlyphSet glyphSet, char character, float xCoord, float yCoord, final float screenWidth, final float screenHeight) {
 		
-	    GlyphPage glyphPage = font.getGlyphPage(character);
-	    
+ 		UnicodeGlyphFont font = glyphSet.font;
+        GlyphPage glyphPage = font.getGlyphPage(character);
+
 	    CharacterData characterData = glyphPage.getCharacterData(character);
-	    
-		GraphicalMesh mesh = this.atlas.getGlyphMesh(character);
+
+		GraphicalMesh mesh = glyphSet.atlas.getGlyphMesh(character);
 		
 	    final float left = 0;
 	    final float right =  screenWidth;
