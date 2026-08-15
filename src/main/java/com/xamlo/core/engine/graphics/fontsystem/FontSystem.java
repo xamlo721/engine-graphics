@@ -54,6 +54,14 @@ public class FontSystem {
         return key.toString();
     }
     
+    public UnicodeGlyphFont attach(ApplicationFont key, UnicodeGlyphFont glyphFont) {
+        if (key == null || glyphFont == null) {
+            return null;
+        }
+        fontCache.put(key, glyphFont);
+        return glyphFont;
+    }
+
     // Helper methods for common font registration
     public UnicodeGlyphFont registerFont(String fontFamily, int fontSize, boolean bold, boolean italic, Font awtFont) {
     	ApplicationFont key = new ApplicationFont(fontFamily, fontSize, bold, italic);

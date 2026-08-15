@@ -23,6 +23,10 @@ public class FontResource implements IFontResource<String> {
 		return this.resourceID;
 	}
 
+	public UnicodeGlyphFont getGlyphFont() {
+		return this.glyphFont;
+	}
+
 	@Override
 	public IFontAtlas getFontAtlas() {
 		return glyphFont.getFontAtlas();
