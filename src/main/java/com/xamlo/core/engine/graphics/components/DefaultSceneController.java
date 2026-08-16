@@ -5,16 +5,24 @@ import org.joml.Vector3f;
 import com.xamlo.core.engine.graphics.api.components.ICamera;
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneController;
+import com.xamlo.core.engine.graphics.api.gui.IDragListener;
+import com.xamlo.core.engine.graphics.api.gui.IDraggable;
 import com.xamlo.core.engine.graphics.api.gui.IClickable;
+import com.xamlo.core.engine.graphics.api.gui.IDropTarget;
 import com.xamlo.core.engine.graphics.api.gui.IHoverable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 
+import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 import com.xamlo.engine.api.devices.EnumMouseButtons;
 import com.xamlo.engine.api.devices.IKeyboard;
 import com.xamlo.engine.api.devices.IMouse;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
+import com.xamlo.engine.device.events.KeyboardHoldEvent;
+import com.xamlo.engine.device.events.KeyboardReleaseEvent;
+import com.xamlo.engine.device.events.MouseButtonReleaseEvent;
 import com.xamlo.engine.device.events.MouseClickEvent;
-import com.xamlo.engine.device.events.MouseDragAndDropEvent;
+import com.xamlo.engine.device.events.MouseDragAndropEvent;
+import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
 
 import net.lenni0451.asmevents.event.EventTarget;
@@ -22,12 +30,21 @@ import net.lenni0451.asmevents.event.EventTarget;
 public class DefaultSceneController implements ISceneController {
 
 	private ICamera camera;
+	@SuppressWarnings("unused")
 	private IMouse mouse;
+	@SuppressWarnings("unused")
 	private IKeyboard keyboard;
 	private IScene scene;
 	
 	//this flag allow to execute mouse click&hover event like a UI actions
 	private boolean inHUDMode;
+	
+	/** Удерживается ли вторая кнопка мыши — берётся из событий, а не из устройств. */
+	private boolean hudMouseButtonHeld;
+	
+	// Состояние активного жеста drag-and-drop (живёт только на диспетчерском потоке)
+	private IDraggable draggingElement;
+	private IDropTarget dragTarget;
 	
 	private static final float movAmt = 0.0011f;
 
@@ -38,47 +55,32 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = KeyboardClickEvent.class)
 	public void onKeyboardClienEvent(final KeyboardClickEvent event) {
-        
-		//System.out.println("KEYBOARD EVENT " + event.getButton().toString());
-
-		switch (event.getButton()) {
+        // Edge-событие «нажата» — для разовых действий по клавише. Движение и
+        // прочие «пока зажато» состояния обрабатываются в onKeyboardHoldEvent.
+    }
+	
+	@Override
+	@EventTarget(noParamEvents = KeyboardReleaseEvent.class)
+	public void onKeyboardReleaseEvent(final KeyboardReleaseEvent event) {
+        // Edge-событие «отпущена».
+    }
+	
+	@Override
+	@EventTarget(noParamEvents = KeyboardHoldEvent.class)
+	public void onKeyboardHoldEvent(final KeyboardHoldEvent event) {
 		
-			case KEY_W: {
-				camera.move( new Vector3f(0.0f, 0.0f, -movAmt));
-				break;
+		for (EnumKeyboardButtons heldKey : event.getHeldKeys()) {
+			switch (heldKey) {
+				case KEY_W: camera.move(new Vector3f(0.0f, 0.0f, -movAmt)); break;
+				case KEY_S: camera.move(new Vector3f(0.0f, 0.0f, movAmt)); break;
+				case KEY_A: camera.move(new Vector3f(-movAmt, 0.0f, 0.0f)); break;
+				case KEY_D: camera.move(new Vector3f(movAmt, 0.0f, 0.0f)); break;
+				case KEY_SPACE: camera.move(new Vector3f(0.0f, movAmt, 0.0f)); break;
+				case KEY_LEFT_SHIFT: camera.move(new Vector3f(0.0f, -movAmt, 0.0f)); break;
+				case KEY_Q: camera.rotate(new Vector3f(0.0f, movAmt * 40, 0.0f)); break;
+				case KEY_E: camera.rotate(new Vector3f(0.0f, -movAmt * 40, 0.0f)); break;
+				default: break;
 			}
-			case KEY_S: {
-				camera.move( new Vector3f(0.0f, 0.0f, movAmt));
-				break;
-			}
-			case KEY_A: {
-				camera.move( new Vector3f(-movAmt, 0.0f, 0.0f));
-				break;
-			}
-			case KEY_D: {
-				camera.move( new Vector3f(movAmt, 0.0f, 0.0f));
-				break;
-			}
-			case KEY_SPACE: {
-				camera.move( new Vector3f(0.0f, movAmt, 0.0f));
-				break;
-			}
-			case KEY_LEFT_SHIFT: {
-				camera.move( new Vector3f(0.0f, -movAmt, 0.0f));
-				break;
-			}
-			case KEY_Q: {
-				camera.rotate(new Vector3f(0.0f, 0.0f, movAmt * 40));
-				break;
-			}
-			case KEY_E: {
-				camera.rotate(new Vector3f(0.0f, 0.0f, -movAmt * 40));
-				break;
-			}
-			default: {
-				//throw new IllegalArgumentException("Unexpected value: " + event.getButton());
-			}
-			
 		}
 	}
 
@@ -97,8 +99,6 @@ public class DefaultSceneController implements ISceneController {
 				}
 
 				if (element instanceof IClickable) {
-					//TODO: А это точно нормальное состояние для вызова листенера...
-
 					((IClickable)element).getClickListener().onClicked(((IClickable)element));
 				}
 				
@@ -133,39 +133,110 @@ public class DefaultSceneController implements ISceneController {
 	}
 
 	@Override
+	@EventTarget(noParamEvents = MouseButtonReleaseEvent.class)
+	public void onMouseButtonReleaseEvent(final MouseButtonReleaseEvent event) {
+        // Edge-событие отпускания кнопки — зарезервировано под сброс pressed-состояний элементов.
+    }
+	
+	@Override
+	@EventTarget(noParamEvents = MouseHoldEvent.class)
+	public void onMouseHoldEvent(final MouseHoldEvent event) {
+		
+		hudMouseButtonHeld = event.getHeldButtons().contains(EnumMouseButtons.MOUSE_BUTTON_2);
+	}
+	
+	@Override
 	@EventTarget(noParamEvents = MouseHoverEvent.class)
 	public void onMouseHoverEvent(MouseHoverEvent event) {
 
-		if (mouse.isButtonHolding(EnumMouseButtons.MOUSE_BUTTON_2) && this.inHUDMode) {
+		if (hudMouseButtonHeld && this.inHUDMode) {
 			camera.rotate(new Vector3f( event.getDy() * movAmt * 10, event.getDx() * movAmt * 10, 0.0f));
 			return;
 		}
 		
-
 		
 		for (IUIElement otherElement : scene.getGuiElements()) {
 			if ( otherElement instanceof IHoverable ) {
-				((IHoverable) otherElement).setHovered(false);
+				((IHoverable)otherElement).setHovered(false);
 			}
 		}
-		IUIElement element = this.scene.findElementAt(event.getOldXCoord() + event.getDx(), event.getOldYCoord() + event.getDy());
+		IUIElement element = this.scene.findElementAt(event.getXCoord(), event.getYCoord());
 
 		if (element != null && element instanceof IHoverable) {
-			IHoverable hoverableElement = (IHoverable) element;
+			IHoverable hoverableElement = (IHoverable)element;
 			hoverableElement.setHovered(true);
 		}
-//		glfwSetCursorPos(LJWGLWindow.getInstance().getWindow(),
-//				mouse.getLockedCursorPosition().x(),
-//				mouse.getLockedCursorPosition().y());
-
 		
 	}
 
 	@Override
-	@EventTarget(noParamEvents = MouseDragAndDropEvent.class)
-	public void onMouseDragAndDropEvent(MouseDragAndDropEvent event) {
-		// TODO Auto-generated method stub
+	@EventTarget(noParamEvents = MouseDragAndropEvent.class)
+	public void onMouseDragAndDropEvent(final MouseDragAndropEvent event) {
 		
+		switch (event.getPhase()) {
+			
+			case START: {
+				// Жест стал перетаскиванием — ищем элемент под курсором без исключений
+				IUIElement found = this.scene.findElementAt(event.getxPos(), event.getyPos());
+				if (found instanceof IDraggable && ((IDraggable)found).getDragListener() != null) {
+					this.draggingElement = (IDraggable)found;
+					IDragListener listener = draggingElement.getDragListener();
+					listener.onDragStart(draggingElement, event.getxPos(), event.getyPos());
+				} else {
+					this.draggingElement = null;
+				}
+				break;
+			}
+			
+			case DRAG: {
+				if (draggingElement == null) break;
+				
+				IDragListener listener = draggingElement.getDragListener();
+				
+				// Таргет под курсором: сам перетаскиваемый элемент из хит-теста исключаем
+				IUIElement underCursor = this.scene.findElementAt(event.getxPos(), event.getyPos(), draggingElement);
+				IDropTarget newTarget = (underCursor instanceof IDropTarget) ? (IDropTarget)underCursor : null;
+				
+				if (newTarget != dragTarget) {
+					if (dragTarget != null) {
+						dragTarget.setDropActive(false);
+						listener.onDragLeaveTarget(draggingElement, dragTarget);
+					}
+					if (newTarget != null) {
+						newTarget.setDropActive(true);
+						listener.onDragEnterTarget(draggingElement, newTarget);
+					}
+					dragTarget = newTarget;
+				}
+				
+				listener.onDrag(draggingElement, event.getxPos(), event.getyPos(), event.getDeltaX(), event.getDeltaY());
+				break;
+			}
+			
+			case END: {
+				if (draggingElement == null) break;
+				
+				IDragListener listener = draggingElement.getDragListener();
+				
+				if (dragTarget != null) {
+					dragTarget.setDropActive(false);
+					listener.onDrop(draggingElement, dragTarget, event.getxPos(), event.getyPos());
+				} else {
+					IUIElement underCursor = this.scene.findElementAt(event.getxPos(), event.getyPos(), draggingElement);
+					if (underCursor instanceof IDropTarget) {
+						IDropTarget lastSecond = (IDropTarget)underCursor;
+						lastSecond.setDropActive(false);
+						listener.onDrop(draggingElement, lastSecond, event.getxPos(), event.getyPos());
+					} else {
+						listener.onDragEnd(draggingElement, event.getxPos(), event.getyPos());
+					}
+				}
+				
+				this.draggingElement = null;
+				this.dragTarget = null;
+				break;
+			}
+		}
 	}
 
 	@Override

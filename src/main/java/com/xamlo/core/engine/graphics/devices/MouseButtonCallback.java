@@ -9,9 +9,9 @@ import org.lwjgl.glfw.GLFWMouseButtonCallback;
 import com.xamlo.engine.api.devices.EnumMouseButtons;
 
 public class MouseButtonCallback extends GLFWMouseButtonCallback {
-	
+
 	private AbstractMouse mouse;
-	
+
 	public MouseButtonCallback(AbstractMouse mouse) {
 		this.mouse = mouse;
 	}
@@ -20,23 +20,22 @@ public class MouseButtonCallback extends GLFWMouseButtonCallback {
     public void invoke(long window, int keyCode, int action, int mods) {
 
         synchronized (mouse) {
-        	
+
 	    	EnumMouseButtons key = converteMouseKeycode(keyCode);
-	
+
 	        if (action == GLFW_PRESS){
 	        	if (!this.mouse.pushedButtons.contains(key)){
 	        		this.mouse.pushedButtons.add(key);
 	        		this.mouse.buttonsHolding.add(key);
 	        	}
 	        }
-	        
+
 	        if (action == GLFW_RELEASE){
 	        	this.mouse.releasedButtons.add(key);
 	        	this.mouse.buttonsHolding.remove(key);
 	        }
-	        
         }
-        
+
     }
     
 

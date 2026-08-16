@@ -1,11 +1,13 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
+import com.xamlo.core.engine.graphics.api.gui.IDragListener;
+import com.xamlo.core.engine.graphics.api.gui.IDraggable;
 import com.xamlo.core.engine.graphics.api.gui.IClickListener;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.elements.IPushButton;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 
-public class PushButton extends Label implements IPushButton {
+public class PushButton extends Label implements IPushButton, IDraggable {
 
 	protected IColor buttonColor;
 	protected IColor buttonHoverColor;
@@ -26,6 +28,7 @@ public class PushButton extends Label implements IPushButton {
     protected boolean buttonHovered;
     protected boolean buttonFocused;
     protected IClickListener buttonClickListener;
+    protected IDragListener buttonDragListener;
     
     public PushButton(String text) {
     	super(text);
@@ -216,6 +219,17 @@ public class PushButton extends Label implements IPushButton {
     @Override
     public IClickListener getClickListener() {
         return buttonClickListener;
+    }
+
+
+    @Override
+    public void setDragListener(IDragListener listener) {
+        this.buttonDragListener = listener;
+    }
+
+    @Override
+    public IDragListener getDragListener() {
+        return buttonDragListener;
     }
 
 

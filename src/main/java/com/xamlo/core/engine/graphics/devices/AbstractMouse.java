@@ -52,6 +52,11 @@ public abstract class AbstractMouse implements IMouse, IUpdatableDevice {
 	}
 
 	@Override
+	public ArrayList<EnumMouseButtons> getReleasedButtons() {
+		return releasedButtons;
+	}
+
+	@Override
 	public Vector2f getCursorPosition() {
 		return cursorPosition;
 	}

@@ -24,19 +24,25 @@ import com.xamlo.core.engine.graphics.api.components.IRenderEngine;
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneController;
 import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
+import com.xamlo.core.engine.graphics.api.devices.IInputFrameProvider;
+import com.xamlo.core.engine.graphics.api.devices.InputFrame;
 import com.xamlo.core.engine.graphics.devices.AbstractKeyboard;
 import com.xamlo.core.engine.graphics.devices.AbstractMouse;
 import com.xamlo.core.engine.graphics.devices.AbstractWindow;
 import com.xamlo.core.engine.graphics.devices.LJWGLKeyboard;
 import com.xamlo.core.engine.graphics.devices.LJWGLMouse;
 import com.xamlo.core.engine.graphics.devices.LJWGLWindow;
+import com.xamlo.core.engine.graphics.devices.VolatileInputFrameHolder;
 import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullMode;
 import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullOrder;
 import com.xamlo.core.engine.graphics.opengl.cull.OpenGlCull;
-import com.xamlo.engine.api.devices.EnumKeyboardButtons;
-import com.xamlo.engine.api.devices.EnumMouseButtons;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
+import com.xamlo.engine.device.events.KeyboardHoldEvent;
+import com.xamlo.engine.device.events.KeyboardReleaseEvent;
+import com.xamlo.engine.device.events.MouseButtonReleaseEvent;
 import com.xamlo.engine.device.events.MouseClickEvent;
+import com.xamlo.engine.device.events.MouseDragAndropEvent;
+import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
 
 import net.lenni0451.asmevents.EventManager;
@@ -59,10 +65,27 @@ public class RenderEngine implements IRenderEngine {
 	private AbstractWindow window;
     private AbstractKeyboard keyboard;
     private AbstractMouse mouse;
+
+	private final VolatileInputFrameHolder inputFrames = new VolatileInputFrameHolder();
+	private long inputFrameSequence;
 	
 	public RenderEngine(ISceneRenderer renderer) {
 		this.isCloseRequest = false;
 		this.renderer = renderer;
+	}
+
+	@Override
+	public IInputFrameProvider getInputFrames() {
+		return inputFrames;
+	}
+
+	/**
+	 * Запрошено ли закрытие окна пользователем. До создания окна всегда false —
+	 * по этой причине проверку в цикле рендера можно делать безопасно с первого кадра.
+	 */
+	@Override
+	public boolean isCloseRequested() {
+		return window != null && window.isCloseRequested();
 	}
 	
 	public void setCamera(ICamera cam) {
@@ -156,8 +179,13 @@ public class RenderEngine implements IRenderEngine {
 
 
 		EventManager.unregister(KeyboardClickEvent.class, sceneController);
+		EventManager.unregister(KeyboardReleaseEvent.class, sceneController);
+		EventManager.unregister(KeyboardHoldEvent.class, sceneController);
 		EventManager.unregister(MouseClickEvent.class, sceneController);
+		EventManager.unregister(MouseButtonReleaseEvent.class, sceneController);
+		EventManager.unregister(MouseHoldEvent.class, sceneController);
 		EventManager.unregister(MouseHoverEvent.class, sceneController);
+		EventManager.unregister(MouseDragAndropEvent.class, sceneController);
 	}
 	@Override
 	public void loadScene() {
@@ -182,19 +210,21 @@ public class RenderEngine implements IRenderEngine {
 	@Override
 	public void updateInputDevices() {
 
-		for (EnumKeyboardButtons holdButton : keyboard.getKeysHolding()) {
-			EventManager.call(new KeyboardClickEvent(holdButton));
-		}
-		
-		if (mouse.getCursorPositionDiff().x != 0 &&  mouse.getCursorPositionDiff().y != 0) {
-			float dy = mouse.getCursorPositionDiff().x;
-			float dx = mouse.getCursorPositionDiff().y;
-			EventManager.call(new MouseHoverEvent(mouse.getCursorPosition().x, mouse.getCursorPosition().y, dx, dy));
-		}
-
-		for (EnumMouseButtons holdButton : mouse.getButtonsHolding()) {
-			EventManager.call(new MouseClickEvent(mouse.getCursorPosition().x, mouse.getCursorPosition().y, holdButton));
-		}
+		// Снимок строится из живых устройств ДО их update(): все callback'и этого
+		// кадра уже учтены в накопленных множествах, а очистка произойдёт ниже.
+		// Сам диспетч событий выполняется на потоке устройства — см. DeviceController.
+		InputFrame frame = new InputFrame(
+				++inputFrameSequence,
+				keyboard.getPushedKeys(),
+				keyboard.getReleasedKeys(),
+				keyboard.getKeysHolding(),
+				mouse.getPushedButtons(),
+				mouse.getReleasedButtons(),
+				mouse.getButtonsHolding(),
+				mouse.getCursorPosition().x,
+				mouse.getCursorPosition().y,
+				mouse.getScrollOffset());
+		inputFrames.publish(frame);
 
 		window.update();
 		keyboard.update();
@@ -232,8 +262,13 @@ public class RenderEngine implements IRenderEngine {
 		}
 
 		EventManager.register(KeyboardClickEvent.class, sceneController);
+		EventManager.register(KeyboardReleaseEvent.class, sceneController);
+		EventManager.register(KeyboardHoldEvent.class, sceneController);
 		EventManager.register(MouseClickEvent.class, sceneController);
+		EventManager.register(MouseButtonReleaseEvent.class, sceneController);
+		EventManager.register(MouseHoldEvent.class, sceneController);
 		EventManager.register(MouseHoverEvent.class, sceneController);
+		EventManager.register(MouseDragAndropEvent.class, sceneController);
 	    this.isRendering = true;
 
 	    this.renderer.init();

@@ -1,5 +1,7 @@
 package com.xamlo.core.engine.graphics.threads;
 
+import org.lwjgl.glfw.GLFW;
+
 import com.xamlo.core.engine.graphics.api.components.IRenderEngine;
 
 /**
@@ -53,7 +55,15 @@ public class RenderThread extends Thread {
 
 
 		while (renderingEngine.isRendering()) {
-			
+
+			//Явная выдача событий ОС: без этого callback'и GLFW доставляются
+			//непредсказуемо, и при низком FPS нажатия теряются.
+			GLFW.glfwPollEvents();
+
+			if (renderingEngine.isCloseRequested()) {
+				break;
+			}
+
 			boolean isRenderFrame = false;
 						
 			//Количество циклов сейчас

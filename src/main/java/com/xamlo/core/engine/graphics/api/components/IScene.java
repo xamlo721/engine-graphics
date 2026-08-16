@@ -24,6 +24,16 @@ public interface IScene {
 	
 	public IUIElement findElementAt(float xCoord, float yCoord);
 
+	/**
+	 * Тот же hit-test, но с исключением указанного объекта из результатов — используется
+	 * drag-and-drop'ом, чтобы перетаскиваемый виджет не заслонял таргеты под собой.
+	 * Параметр намеренно Object: исключаемый объект может быть любым интерфейсом элемента
+	 * (например IDraggable), а сравнение идёт по identity/equals.
+	 */
+	default public IUIElement findElementAt(float xCoord, float yCoord, Object excluded) {
+		return findElementAt(xCoord, yCoord);
+	}
+
 	List<IUIElement> getGuiElements();
 	
 	//TODO: Есть мнение, что сцена это совокупность объектов, которую могут рисовать

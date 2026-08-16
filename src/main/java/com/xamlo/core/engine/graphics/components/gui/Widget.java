@@ -10,7 +10,12 @@ import com.xamlo.core.engine.graphics.api.gui.font.IFont;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.font.ApplicationFont;
 
-public class Widget implements IWidget {
+import com.xamlo.core.engine.graphics.api.gui.IDropTarget;
+
+public class Widget implements IWidget, IDropTarget {
+
+	private boolean dropActive;
+	private IColor savedDropBackground;
 	
 	protected UIElementGeometry geometry;
 	protected IUIElement parent;
@@ -251,6 +256,25 @@ public class Widget implements IWidget {
 	@Override
 	public int getMargin() {
 		return this.margin;
+	}
+
+	/** Подсветка состояния «готов принять перетаскиваемый элемент». */
+	@Override
+	public void setDropActive(boolean active) {
+		if (this.dropActive == active) return;
+		this.dropActive = active;
+		if (active) {
+			this.savedDropBackground = this.backgroundColor;
+			this.setBackgroundColor(new Color(80, 220, 120));
+		} else if (savedDropBackground != null) {
+			this.setBackgroundColor(savedDropBackground);
+			this.savedDropBackground = null;
+		}
+	}
+
+	@Override
+	public boolean isDropActive() {
+		return dropActive;
 	}
 
 }

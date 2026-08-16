@@ -7,23 +7,38 @@ import static org.lwjgl.glfw.GLFW.glfwSetMouseButtonCallback;
 import static org.lwjgl.glfw.GLFW.glfwSetScrollCallback;
 
 import org.joml.Vector2f;
+import org.lwjgl.glfw.GLFWCursorPosCallback;
+import org.lwjgl.glfw.GLFWMouseButtonCallback;
+import org.lwjgl.glfw.GLFWScrollCallback;
 
 import com.xamlo.engine.api.devices.EnumMouseButtons;
 
 public class LJWGLMouse extends AbstractMouse {
-	
+
+	// Сильные ссылки на объекты колбэков: GLFW держит только нативный указатель,
+	// без своих ссылок JVM может собрать их и молча перестать доставлять события.
+	private final GLFWMouseButtonCallback mouseButtonCb;
+	private final GLFWCursorPosCallback cursorPosCb;
+	private final GLFWScrollCallback scrollCb;
+
 	public LJWGLMouse() {
-		
+
 		cursorPosition = new Vector2f();
 		previousCursorPosition = new Vector2f();
 		cursorPositionDiff = new Vector2f();
-		
-		glfwSetMouseButtonCallback(LJWGLWindow.getInstance().getWindow(), new MouseButtonCallback(this));
-		
-		glfwSetCursorPosCallback(LJWGLWindow.getInstance().getWindow(), new CursorPosCallback(this));
-		
-		glfwSetScrollCallback(LJWGLWindow.getInstance().getWindow(), new MouseScrollCallback(this));
-		
+
+		long windowHandle = LJWGLWindow.getInstance().getWindow();
+
+		mouseButtonCb = new MouseButtonCallback(this);
+		cursorPosCb = new CursorPosCallback(this);
+		scrollCb = new MouseScrollCallback(this);
+
+		glfwSetMouseButtonCallback(windowHandle, mouseButtonCb);
+
+		glfwSetCursorPosCallback(windowHandle, cursorPosCb);
+
+		glfwSetScrollCallback(windowHandle, scrollCb);
+
 	}
 	
 	@Override
@@ -45,7 +60,6 @@ public class LJWGLMouse extends AbstractMouse {
         // Удаляем из удерживаемых клавиши, которые были отпущены
         buttonsHolding.removeAll(releasedButtons);
 
-		
 		setScrollOffset(0);
 		pushedButtons.clear();
 
