@@ -1,6 +1,7 @@
 package com.xamlo.core.engine.graphics.api.components;
 
 import com.xamlo.core.engine.graphics.api.devices.IInputFrameProvider;
+import com.xamlo.core.engine.graphics.threads.RenderTaskQueue;
 
 public interface IRenderEngine {
 	
@@ -27,6 +28,15 @@ public interface IRenderEngine {
 	
 	/** Канал снимков ввода: поток рендера публикует, один диспетчерский поток потребляет. */
 	public IInputFrameProvider getInputFrames();
+
+	/**
+	 * Выполняет задачи, поданные другими потоками через {@link #getRenderTaskQueue()}.
+	 * Вызывать на рендер-потоке (владеет GLFW-окном и GL-контекстом).
+	 */
+	public void processRenderTasks();
+
+	/** Очередь задач на рендер-поток (для не тред-сейф'овых GLFW-вызовов из других потоков). */
+	public RenderTaskQueue getRenderTaskQueue();
 
 	/** Запрошено ли закрытие окна пользователем (false до создания окна). */
 	public boolean isCloseRequested();

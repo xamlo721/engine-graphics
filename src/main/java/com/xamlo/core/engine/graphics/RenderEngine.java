@@ -25,6 +25,7 @@ import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneController;
 import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
 import com.xamlo.core.engine.graphics.api.devices.IInputFrameProvider;
+import com.xamlo.core.engine.graphics.threads.RenderTaskQueue;
 import com.xamlo.core.engine.graphics.api.devices.InputFrame;
 import com.xamlo.core.engine.graphics.devices.AbstractKeyboard;
 import com.xamlo.core.engine.graphics.devices.AbstractMouse;
@@ -32,6 +33,7 @@ import com.xamlo.core.engine.graphics.devices.AbstractWindow;
 import com.xamlo.core.engine.graphics.devices.LJWGLKeyboard;
 import com.xamlo.core.engine.graphics.devices.LJWGLMouse;
 import com.xamlo.core.engine.graphics.devices.LJWGLWindow;
+import com.xamlo.core.engine.graphics.devices.Clipboard;
 import com.xamlo.core.engine.graphics.devices.VolatileInputFrameHolder;
 import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullMode;
 import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullOrder;
@@ -40,6 +42,7 @@ import com.xamlo.engine.device.events.CharacterInputEvent;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
 import com.xamlo.engine.device.events.KeyboardHoldEvent;
 import com.xamlo.engine.device.events.KeyboardReleaseEvent;
+import com.xamlo.engine.device.events.MouseButtonPressEvent;
 import com.xamlo.engine.device.events.MouseButtonReleaseEvent;
 import com.xamlo.engine.device.events.MouseClickEvent;
 import com.xamlo.engine.device.events.MouseDragAndropEvent;
@@ -69,7 +72,8 @@ public class RenderEngine implements IRenderEngine {
 
 	private final VolatileInputFrameHolder inputFrames = new VolatileInputFrameHolder();
 	private long inputFrameSequence;
-	
+	private final RenderTaskQueue renderTaskQueue = new RenderTaskQueue();
+
 	public RenderEngine(ISceneRenderer renderer) {
 		this.isCloseRequest = false;
 		this.renderer = renderer;
@@ -78,6 +82,16 @@ public class RenderEngine implements IRenderEngine {
 	@Override
 	public IInputFrameProvider getInputFrames() {
 		return inputFrames;
+	}
+
+	@Override
+	public RenderTaskQueue getRenderTaskQueue() {
+		return renderTaskQueue;
+	}
+
+	@Override
+	public void processRenderTasks() {
+		renderTaskQueue.drain();
 	}
 
 	/**
@@ -184,6 +198,7 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.unregister(KeyboardHoldEvent.class, sceneController);
 		EventManager.unregister(CharacterInputEvent.class, sceneController);
 		EventManager.unregister(MouseClickEvent.class, sceneController);
+		EventManager.unregister(MouseButtonPressEvent.class, sceneController);
 		EventManager.unregister(MouseButtonReleaseEvent.class, sceneController);
 		EventManager.unregister(MouseHoldEvent.class, sceneController);
 		EventManager.unregister(MouseHoverEvent.class, sceneController);
@@ -269,10 +284,15 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.register(KeyboardHoldEvent.class, sceneController);
 		EventManager.register(CharacterInputEvent.class, sceneController);
 		EventManager.register(MouseClickEvent.class, sceneController);
+		EventManager.register(MouseButtonPressEvent.class, sceneController);
 		EventManager.register(MouseButtonReleaseEvent.class, sceneController);
 		EventManager.register(MouseHoldEvent.class, sceneController);
 		EventManager.register(MouseHoverEvent.class, sceneController);
 		EventManager.register(MouseDragAndropEvent.class, sceneController);
+
+		// Клипборд: GLFW-вызовы выполняются на этом (рендер) потоке через очередь задач.
+		Clipboard.init(renderTaskQueue);
+
 	    this.isRendering = true;
 
 	    this.renderer.init();

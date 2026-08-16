@@ -64,6 +64,10 @@ public class RenderThread extends Thread {
 				break;
 			}
 
+			// Задачи других потоков (GLFW-клипборд и т.п.) выполняем здесь:
+			// мы на рендер-потоке, владеющем окном и GL-контекстом.
+			renderingEngine.processRenderTasks();
+
 			boolean isRenderFrame = false;
 						
 			//Количество циклов сейчас

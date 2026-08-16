@@ -15,6 +15,7 @@ import com.xamlo.core.engine.graphics.api.gui.IHoverable;
 import com.xamlo.core.engine.graphics.api.gui.IKeyboardHandler;
 import com.xamlo.core.engine.graphics.api.gui.IPointer;
 import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
+import com.xamlo.core.engine.graphics.api.gui.ITextSelectionHandler;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
@@ -25,6 +26,7 @@ import com.xamlo.engine.device.events.CharacterInputEvent;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
 import com.xamlo.engine.device.events.KeyboardHoldEvent;
 import com.xamlo.engine.device.events.KeyboardReleaseEvent;
+import com.xamlo.engine.device.events.MouseButtonPressEvent;
 import com.xamlo.engine.device.events.MouseButtonReleaseEvent;
 import com.xamlo.engine.device.events.MouseClickEvent;
 import com.xamlo.engine.device.events.MouseDragAndropEvent;
@@ -54,6 +56,12 @@ public class DefaultSceneController implements ISceneController {
 	
 	// Элемент, принимающий клавиатурный ввод (устанавливается по клику / ESC снимает)
 	private IUIElement focusedElement;
+	
+	// Жест выделения перетаскиванием (живёт на диспетчерском потоке)
+	private IUIElement selectingElement;
+	
+	// Зажата ли левая кнопка мыши — из MouseHoldEvent (для drag-фазы выделения)
+	private boolean leftButtonHeld;
 	
 	private static final float movAmt = 0.0011f;
 
@@ -191,21 +199,49 @@ public class DefaultSceneController implements ISceneController {
 	}
 
 	@Override
+	@EventTarget(noParamEvents = MouseButtonPressEvent.class)
+	public void onMouseButtonPressEvent(final MouseButtonPressEvent event) {
+		if (event.getButton() != EnumMouseButtons.MOUSE_BUTTON_1) {
+			return;
+		}
+		// Старт выделения: ближайший к курсору элемент, поддерживающий выделение.
+		IUIElement element = this.scene.findElementAt(event.getxPos(), event.getyPos());
+		IUIElement target = nearestTextSelectionHandler(element);
+		this.selectingElement = target;
+		if (target != null) {
+			// Поле, где начинают выделять, получает и клавиатурный фокус
+			// (drag без клика не прогоняет focusNearestFocusable из click-обработчика).
+			focusNearestFocusable(target);
+			((ITextSelectionHandler) target).onSelectionStart(event.getxPos(), event.getyPos());
+		}
+	}
+
+	@Override
 	@EventTarget(noParamEvents = MouseButtonReleaseEvent.class)
 	public void onMouseButtonReleaseEvent(final MouseButtonReleaseEvent event) {
-        // Edge-событие отпускания кнопки — зарезервировано под сброс pressed-состояний элементов.
-    }
+		if (event.getButton() == EnumMouseButtons.MOUSE_BUTTON_1 && selectingElement != null) {
+			((ITextSelectionHandler) selectingElement).onSelectionEnd(event.getxPos(), event.getyPos());
+			selectingElement = null;
+		}
+	}
 	
 	@Override
 	@EventTarget(noParamEvents = MouseHoldEvent.class)
 	public void onMouseHoldEvent(final MouseHoldEvent event) {
-		
+
 		hudMouseButtonHeld = event.getHeldButtons().contains(EnumMouseButtons.MOUSE_BUTTON_2);
+		leftButtonHeld = event.getHeldButtons().contains(EnumMouseButtons.MOUSE_BUTTON_1);
 	}
 	
 	@Override
 	@EventTarget(noParamEvents = MouseHoverEvent.class)
 	public void onMouseHoverEvent(MouseHoverEvent event) {
+
+		// Идёт выделение перетаскиванием — растягиваем его до курсора.
+		if (selectingElement != null && leftButtonHeld) {
+			((ITextSelectionHandler) selectingElement).onSelectionDrag(event.getXCoord(), event.getYCoord());
+			return;
+		}
 
 		if (hudMouseButtonHeld && this.inHUDMode) {
 			camera.rotate(new Vector3f( event.getDy() * movAmt * 10, event.getDx() * movAmt * 10, 0.0f));
@@ -311,6 +347,21 @@ public class DefaultSceneController implements ISceneController {
 			candidate = candidate.hasParent() ? candidate.getParent() : null;
 		}
 		// Клик по нефокусируемому элементу фокус не меняет (снимает только пустота/ESC).
+	}
+
+	/**
+	 * Ближайший предок элемента (включая сам), поддерживающий выделение мышью.
+	 * Клик по внутреннему индикатору текстового поля выделяет само поле.
+	 */
+	private IUIElement nearestTextSelectionHandler(IUIElement element) {
+		IUIElement candidate = element;
+		while (candidate != null) {
+			if (candidate instanceof ITextSelectionHandler) {
+				return candidate;
+			}
+			candidate = candidate.hasParent() ? candidate.getParent() : null;
+		}
+		return null;
 	}
 
 	/** Программно устанавливает фокус (null — снять). */

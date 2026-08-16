@@ -5,6 +5,7 @@ import com.xamlo.engine.api.devices.IMouse;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
 import com.xamlo.engine.device.events.KeyboardHoldEvent;
 import com.xamlo.engine.device.events.KeyboardReleaseEvent;
+import com.xamlo.engine.device.events.MouseButtonPressEvent;
 import com.xamlo.engine.device.events.MouseButtonReleaseEvent;
 import com.xamlo.engine.device.events.MouseClickEvent;
 import com.xamlo.engine.device.events.MouseDragAndropEvent;
@@ -32,6 +33,9 @@ public interface ISceneController {
 
 	/** Настоящий клик мышью: отпускание кнопки без значительного смещения с момента нажатия. */
 	public void onMouseClienEvent(final MouseClickEvent event);
+
+	/** Нажатие кнопки мыши по координатам нажатия (edge «зажата»). */
+	public void onMouseButtonPressEvent(final MouseButtonPressEvent event);
 
 	/** Отпускание кнопки мыши по координатам отпускания. */
 	public void onMouseButtonReleaseEvent(final MouseButtonReleaseEvent event);

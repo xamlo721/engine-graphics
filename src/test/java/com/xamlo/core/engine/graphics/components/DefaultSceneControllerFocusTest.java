@@ -28,6 +28,10 @@ import com.xamlo.engine.device.events.CharacterInputEvent;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
 import com.xamlo.engine.device.events.KeyboardHoldEvent;
 import com.xamlo.engine.device.events.MouseClickEvent;
+import com.xamlo.engine.device.events.MouseButtonPressEvent;
+import com.xamlo.engine.device.events.MouseButtonReleaseEvent;
+import com.xamlo.engine.device.events.MouseHoldEvent;
+import com.xamlo.engine.device.events.MouseHoverEvent;
 
 public class DefaultSceneControllerFocusTest {
 
@@ -321,6 +325,52 @@ public class DefaultSceneControllerFocusTest {
         assertFalse(first.isFocused(), "старое поле теряет фокус");
         assertTrue(second.isFocused());
         assertSame(second, controller.getFocusedElement());
+    }
+
+    // --- выделение перетаскиванием -----------------------------------------
+
+    @Test
+    public void pressOnFieldStartsSelectionAndFocuses() {
+        TestScene scene = new TestScene();
+        TextField field = newField();
+        scene.add(field);
+        CountingCamera camera = new CountingCamera();
+        DefaultSceneController controller = newController(scene, camera);
+
+        controller.onMouseButtonPressEvent(new MouseButtonPressEvent(50, 20, EnumMouseButtons.MOUSE_BUTTON_1));
+
+        assertSame(field, controller.getFocusedElement(), "поле получает фокус при старте выделения");
+        assertTrue(field.isFocused());
+    }
+
+    @Test
+    public void dragWhileHeldExtendsSelectionUntilRelease() {
+        TestScene scene = new TestScene();
+        TextField field = new TextField("Hello");
+        field.resize(new UIElementGeometry(10, 10, 200, 32));
+        scene.add(field);
+        CountingCamera camera = new CountingCamera();
+        DefaultSceneController controller = newController(scene, camera);
+
+        // ЛКМ зажата (hold), затем press на поле
+        controller.onMouseHoldEvent(new MouseHoldEvent(List.of(EnumMouseButtons.MOUSE_BUTTON_1)));
+        controller.onMouseButtonPressEvent(new MouseButtonPressEvent(20, 20, EnumMouseButtons.MOUSE_BUTTON_1));
+        assertTrue(field.isFocused());
+
+        // Движение курсора при зажатой ЛКМ → drag растягивает выделение
+        controller.onMouseHoverEvent(new MouseHoverEvent(60, 20, 40, 0));
+        assertTrue(field.getSelectionStart() >= 0, "drag создал выделение");
+
+        // Отпускание завершает жест
+        controller.onMouseButtonReleaseEvent(new MouseButtonReleaseEvent(60, 20, EnumMouseButtons.MOUSE_BUTTON_1));
+        controller.onMouseHoldEvent(new MouseHoldEvent(List.of()));
+
+        // Дальнейшее движение без зажатой кнопки не должно менять выделение
+        int startAfterRelease = field.getSelectionStart();
+        int endAfterRelease = field.getSelectionEnd();
+        controller.onMouseHoverEvent(new MouseHoverEvent(150, 20, 90, 0));
+        assertEquals(startAfterRelease, field.getSelectionStart());
+        assertEquals(endAfterRelease, field.getSelectionEnd());
     }
 
 }

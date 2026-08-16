@@ -289,4 +289,92 @@ public class TextFieldTest {
                 field.selectionHighlight.getGeometry().getWidth());
     }
 
+    // --- выделение мышью ---------------------------------------------------
+
+    @Test
+    public void mouseSelectionStartPlacesAnchorAndCaret() {
+        TextField field = new TextField("Hello");
+        field.resize(new com.xamlo.core.engine.graphics.components.gui.UIElementGeometry(100, 50, 200, 32));
+        field.setFocused(true);
+
+        int pad = Math.max(field.getPadding(), 6);
+        float x = field.getAbsX() + pad + field.getTextWidth("He");
+        field.onSelectionStart(x, 60);
+
+        assertEquals(2, field.getCaretPosition(), "якорь и caret под курсором");
+        assertEquals(-1, field.getSelectionStart(), "ещё нет выделения");
+    }
+
+    @Test
+    public void mouseSelectionDragExtendsSelection() {
+        TextField field = new TextField("Hello");
+        field.resize(new com.xamlo.core.engine.graphics.components.gui.UIElementGeometry(100, 50, 200, 32));
+        field.setFocused(true);
+
+        int pad = Math.max(field.getPadding(), 6);
+        field.onSelectionStart(field.getAbsX() + pad + field.getTextWidth("H"), 60);
+        field.onSelectionDrag(field.getAbsX() + pad + field.getTextWidth("Hel"), 60);
+
+        assertEquals(1, field.getSelectionStart());
+        assertEquals(3, field.getSelectionEnd());
+        assertEquals("el", field.getSelectedText());
+    }
+
+    @Test
+    public void mouseSelectionEndKeepsSelection() {
+        TextField field = new TextField("Hello");
+        field.resize(new com.xamlo.core.engine.graphics.components.gui.UIElementGeometry(100, 50, 200, 32));
+        field.setFocused(true);
+
+        int pad = Math.max(field.getPadding(), 6);
+        field.onSelectionStart(field.getAbsX() + pad, 60);
+        field.onSelectionDrag(field.getAbsX() + pad + field.getTextWidth("Hel"), 60);
+        field.onSelectionEnd(field.getAbsX() + pad + field.getTextWidth("Hel"), 60);
+
+        assertEquals(0, field.getSelectionStart(), "выделение сохраняется после отпускания");
+        assertEquals(3, field.getSelectionEnd());
+    }
+
+    // --- Ctrl-операции ------------------------------------------------------
+
+    @Test
+    public void ctrlASelectsAll() {
+        TextField field = new TextField("hello");
+        field.setFocused(true);
+        field.onKeyPressed(EnumKeyboardButtons.KEY_A, true, false);
+        assertEquals(0, field.getSelectionStart());
+        assertEquals(5, field.getSelectionEnd());
+        assertEquals("hello", field.getSelectedText());
+    }
+
+    @Test
+    public void ctrlXDeletesSelection() {
+        // В юнит-тесте Clipboard не инициализирован — запись no-op, но вырезание срабатывает.
+        TextField field = new TextField("hello");
+        field.setFocused(true);
+        field.selectAll();
+        field.onKeyPressed(EnumKeyboardButtons.KEY_X, true, false);
+        assertEquals("", field.getText(), "выделенное удалено");
+        assertEquals(0, field.getCaretPosition());
+    }
+
+    @Test
+    public void ctrlVWithEmptyClipboardDoesNothing() {
+        // Clipboard не инициализирован → getString() возвращает "" → вставка не меняет текст.
+        TextField field = new TextField("ab");
+        field.setFocused(true);
+        field.setCaretPosition(1);
+        field.onKeyPressed(EnumKeyboardButtons.KEY_V, true, false);
+        assertEquals("ab", field.getText());
+    }
+
+    @Test
+    public void ctrlCWithSelectionDoesNotCrash() {
+        TextField field = new TextField("hello");
+        field.setFocused(true);
+        field.selectAll();
+        field.onKeyPressed(EnumKeyboardButtons.KEY_C, true, false);
+        assertEquals("hello", field.getText(), "копирование не меняет текст");
+    }
+
 }

@@ -4,6 +4,7 @@ import com.xamlo.core.engine.graphics.api.gui.IFrameTickable;
 import com.xamlo.core.engine.graphics.api.gui.IKeyboardHandler;
 import com.xamlo.core.engine.graphics.api.gui.ITextFieldChangeListener;
 import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
+import com.xamlo.core.engine.graphics.api.gui.ITextSelectionHandler;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.elements.ITextField;
@@ -11,6 +12,7 @@ import com.xamlo.core.engine.graphics.api.gui.font.IFont;
 import com.xamlo.core.engine.graphics.font.ApplicationFont;
 import com.xamlo.core.engine.graphics.font.UnicodeGlyphFont;
 import com.xamlo.core.engine.graphics.fontsystem.FontSystem;
+import com.xamlo.core.engine.graphics.devices.Clipboard;
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 
 /**
@@ -22,7 +24,7 @@ import com.xamlo.engine.api.devices.EnumKeyboardButtons;
  * ставит caret по X-координате (IPointerListener). Буфер обмена и
  * горизонтальная прокрутка в v1 не поддерживаются.
  */
-public class TextField extends Label implements ITextField, IKeyboardHandler, IFrameTickable {
+public class TextField extends Label implements ITextField, IKeyboardHandler, IFrameTickable, ITextSelectionHandler {
 
     /** Период мигания caret'а (наносекунды). */
     private static final long BLINK_PERIOD_NS = 533_000_000L;
@@ -244,6 +246,10 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         if (!isFocused()) {
             return;
         }
+        if (ctrl) {
+            handleCtrlCombo(key);
+            return;
+        }
         switch (key) {
             case KEY_BACKSPACE:
                 if (hasSelection()) {
@@ -296,6 +302,65 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
                 break;
         }
         updateIndicators();
+    }
+
+    /** Ctrl-комбинации: копирование/вырезание/вставка/выделить всё. */
+    private void handleCtrlCombo(EnumKeyboardButtons key) {
+        switch (key) {
+            case KEY_C:
+                if (hasSelection()) {
+                    Clipboard.setString(getSelectedText());
+                }
+                break;
+            case KEY_X:
+                if (hasSelection()) {
+                    Clipboard.setString(getSelectedText());
+                    deleteSelection();
+                }
+                break;
+            case KEY_V:
+                pasteFromClipboard();
+                break;
+            case KEY_A:
+                selectAll();
+                break;
+            default:
+                break;
+        }
+        updateIndicators();
+    }
+
+    /** Вставляет содержимое буфера обмена в позицию caret (удаляя выделение). */
+    private void pasteFromClipboard() {
+        String pasted = Clipboard.getString();
+        if (pasted == null || pasted.isEmpty()) {
+            return;
+        }
+        // Вставляем только печатаемые символы (без управляющих, кроме перевода строки не поддерживается)
+        StringBuilder cleaned = new StringBuilder();
+        for (int i = 0; i < pasted.length(); i++) {
+            char c = pasted.charAt(i);
+            if (c == '\n' || c == '\r' || c == '\t' || c < 32) {
+                continue;
+            }
+            cleaned.append(c);
+        }
+        String toInsert = cleaned.toString();
+        if (toInsert.isEmpty()) {
+            return;
+        }
+        deleteSelection();
+        String text = getText();
+        int room = maxLength - text.length();
+        if (room <= 0) {
+            return;
+        }
+        if (toInsert.length() > room) {
+            toInsert = toInsert.substring(0, room);
+        }
+        String newText = text.substring(0, caretIndex) + toInsert + text.substring(caretIndex);
+        applyText(newText);
+        caretIndex += toInsert.length();
     }
 
     @Override
@@ -409,13 +474,23 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
 
     /** Ставит caret по X-координате клика в экранных координатах. */
     private void placeCaretAtScreenX(float screenX) {
+        setCaretPosition(charIndexAtScreenX(screenX));
+    }
+
+    /**
+     * Индекс символа под X-координатой (экранные координаты): первое положение,
+     * где накопленная ширина текста не меньше смещения. Вне текста — начало/конец.
+     */
+    private int charIndexAtScreenX(float screenX) {
         int pad = textPad();
         float localX = screenX - getAbsX() - pad;
         String text = getText();
         UnicodeGlyphFont font = resolveGlyphFont();
         if (font == null) {
-            setCaretPosition(text.length());
-            return;
+            return Math.max(0, Math.min(text.length(), localX < 0 ? 0 : text.length()));
+        }
+        if (localX <= 0) {
+            return 0;
         }
         int lo = 0;
         int hi = text.length();
@@ -427,7 +502,28 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
                 hi = mid;
             }
         }
-        setCaretPosition(lo);
+        return lo;
+    }
+
+    // --- выделение мышью (ITextSelectionHandler) ---------------------------
+
+    @Override
+    public void onSelectionStart(float x, float y) {
+        int pos = charIndexAtScreenX(x);
+        selectionAnchor = pos;
+        caretIndex = pos;
+        updateIndicators();
+    }
+
+    @Override
+    public void onSelectionDrag(float x, float y) {
+        caretIndex = charIndexAtScreenX(x);
+        updateIndicators();
+    }
+
+    @Override
+    public void onSelectionEnd(float x, float y) {
+        // Жест завершён — выделение (и caret) остаются как есть.
     }
 
 }
