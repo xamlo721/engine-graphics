@@ -177,14 +177,24 @@ public class TextElementRenderer {
 	    } else {
 	        bgColorVector = new Vector4f(1, 1, 1, 1);
 	    }
-	    
+
+	    Vector4f textColorVector = new Vector4f(1, 1, 1, 1);
+	    if (element instanceof ILabel) {
+	        IColor textColor = ((ILabel) element).getTextColor();
+	        if (textColor != null) {
+	            textColorVector = textColor.getColorVector();
+	        }
+	    }
+
 	    textShader.setUniform("backgroundColor", bgColorVector);
 	    textShader.setUniform("useTexture", true);
 	    textShader.setUniform("hoverColor", bgColorVector);
-	    textShader.setUniform("hoverIntensity", 0.3f);
-	    
-	    float xCoord = geometry.getXCoord() + 40;
-	    float yCoord = geometry.getYCoord() + geometry.getHeight() - 5;
+	    textShader.setUniform("hoverIntensity", 0.0f);
+	    textShader.setUniform("textColor", textColorVector);
+	    textShader.setUniform("useTextColor", true);
+
+	    float xCoord = element.getAbsX() + 40;
+	    float yCoord = element.getAbsY() + geometry.getHeight() - 5;
 	    
 		OpenGLBlend.enable();
 		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);

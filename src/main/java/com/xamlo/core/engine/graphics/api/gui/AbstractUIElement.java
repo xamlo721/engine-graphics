@@ -14,8 +14,8 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 	
 	private final IShaderResource<String> fragmentShaderSource;
 	
-	private static IModelResource<String> model;
-    private static GraphicalMesh defaultWWidgetMesh;
+	private IModelResource<String> model;
+    private GraphicalMesh defaultWWidgetMesh;
 	
 	
 	public AbstractUIElement() {
@@ -40,6 +40,8 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
             objectShader.createUniform("backgroundColor"); 
             objectShader.createUniform("hoverColor");
             objectShader.createUniform("hoverIntensity");
+			objectShader.createUniform("textColor");
+			objectShader.createUniform("useTextColor");
 			objectShader.createUniform("texture_sampler");
 
 		} catch (Exception e) {
@@ -51,8 +53,14 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 
 	@Override
 	public void release() {
-		this.objectShader.cleanup();
-		defaultWWidgetMesh.cleanup();				
+		if (this.objectShader != null) {
+			this.objectShader.cleanup();
+			this.objectShader = null;
+		}
+		if (defaultWWidgetMesh != null) {
+			defaultWWidgetMesh.cleanup();
+			defaultWWidgetMesh = null;
+		}
 	}
 
 	@Override

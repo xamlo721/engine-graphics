@@ -58,8 +58,8 @@ public class UIElementRenderer {
 	    final float near = 0.2f;
 	    final float far = 1000.0f;
 	    
-	    float Tx = geometry.getXCoord() + geometry.getWidth()/2;
-	    float Ty = geometry.getYCoord() + geometry.getHeight()/2;
+	    float Tx = element.getAbsX() + geometry.getWidth()/2;
+	    float Ty = element.getAbsY() + geometry.getHeight()/2;
 	    float Tz = -1.0f; // вместо 0.0f
 
 		debugUIElement.getShader().bind();

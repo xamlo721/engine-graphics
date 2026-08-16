@@ -2,6 +2,8 @@ package com.xamlo.core.engine.graphics.api.gui;
 
 import java.util.List;
 
+import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
+
 public interface IUIElement {
 
     // Устанавливает позицию виджета по координатам x и y
@@ -38,5 +40,34 @@ public interface IUIElement {
 	
     // Закрывает виджет и освобождает ресурсы, связанные с ним
 	public void free();
+
+	/**
+	 * Абсолютная X-координата элемента в экранных координатах:
+	 * сумма смещений по цепочке родителей плюс локальная координата самого элемента.
+	 */
+	default float getAbsX() {
+		float x = hasParent() ? getParent().getAbsX() : 0f;
+		if (this instanceof IResizable) {
+			UIElementGeometry geometry = ((IResizable) this).getGeometry();
+			if (geometry != null) {
+				x += geometry.getXCoord();
+			}
+		}
+		return x;
+	}
+
+	/**
+	 * Абсолютная Y-координата элемента в экранных координатах.
+	 */
+	default float getAbsY() {
+		float y = hasParent() ? getParent().getAbsY() : 0f;
+		if (this instanceof IResizable) {
+			UIElementGeometry geometry = ((IResizable) this).getGeometry();
+			if (geometry != null) {
+				y += geometry.getYCoord();
+			}
+		}
+		return y;
+	}
 
 }

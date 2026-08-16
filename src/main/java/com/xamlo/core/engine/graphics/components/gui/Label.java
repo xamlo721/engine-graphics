@@ -16,13 +16,13 @@ public class Label extends Widget implements ILabel {
     public Label() {
         super();
         this.text = "";
-        this.textColor = new Color(0, 0, 0);
+        this.textColor = new Color(255, 255, 255);
     }
 
     public Label(String text) {
         super();
         this.text = text;
-        this.textColor = new Color(0, 0, 0);
+        this.textColor = new Color(255, 255, 255);
     }
     
     @Override

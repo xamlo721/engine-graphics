@@ -49,27 +49,14 @@ public class Widget implements IWidget, IDropTarget {
 	}
 	
 	public Widget(IWidget parent) {
+		this();
 		this.parent = parent;
-		this.parent.addChild(this);
-		this.geometry = new UIElementGeometry(0, 0, 0, 0);
-		this.parent = null;
-		this.childWidgets = new ArrayList<IUIElement>();
-		this.visible = true;
-		this.isEnable = true;
-		this.focusable = false;
-		this.backgroundColor = new Color(255, 255, 255);
-		this.font = new ApplicationFont("Default", 12, false, false);
-		this.toolTipText = "";
-		this.border = new Border(4, new Color(128, 128, 128));
-		
+		parent.addChild(this);
 	}
-	
+
 	@Override
 	public void setParent(IUIElement parent) {
 		this.parent = parent;
-		if (geometry != null) {
-			this.resize(this.geometry);
-		}
 	}
 
 	@Override
@@ -103,24 +90,25 @@ public class Widget implements IWidget, IDropTarget {
 		return geometry;
 	}
 
+	/**
+	 * Хранит локальную координату элемента относительно родителя и копирует
+	 * переданную геометрию (аргумент не мутируется, повторный вызов идемпотентен).
+	 */
 	@Override
 	public void resize(UIElementGeometry geometry) {
-
-		if (hasParent()) {
-			geometry.xCoord += ((IWidget)parent).getGeometry().xCoord;
-			geometry.yCoord += ((IWidget)parent).getGeometry().yCoord;
-
-		}
-		
-		this.geometry = geometry;
-		
+		this.geometry = new UIElementGeometry(
+				geometry.getXCoord(), geometry.getYCoord(),
+				geometry.getWidth(), geometry.getHeight());
 	}
 
+	/**
+	 * Изменяет размер, сохраняя текущую позицию.
+	 */
 	@Override
 	public void resize(ElementSize size) {
-
-		this.geometry.width = geometry.width;		
-		this.geometry.height = geometry.height;		
+		this.geometry = new UIElementGeometry(
+				this.geometry.getXCoord(), this.geometry.getYCoord(),
+				size.getWidth(), size.getHeight());
 	}
 
 	@Override
@@ -157,13 +145,7 @@ public class Widget implements IWidget, IDropTarget {
 	@Override
 	public void addChild(IUIElement child) {
 		this.childWidgets.add(child);
-		//if (!child.hasParent()) {
-			child.setParent(this);
-			//Тут апдейт геометрии из-за того, что при добавлении парента, координаты становятся относительными
-			//Но я думаю что это должно как-то не тут вообще обновляться
-			this.resize(this.geometry);
-		//}
-
+		child.setParent(this);
 	}
 	
 	@Override
@@ -193,18 +175,14 @@ public class Widget implements IWidget, IDropTarget {
 
 	@Override
 	public boolean containsPoint(float x, float y) {
-		
-		boolean result = x >= geometry.getXCoord() && 
-		           x <= geometry.getXCoord() + geometry.getWidth() && 
-		           y >= geometry.getYCoord() && 
-		           y <= geometry.getYCoord() + geometry.getHeight();
-		
-//		           if (result) {
-//		        	   System.out.println("containsPoint with result " + result);
-//		        	   System.out.println(this.toString());
-//		           }
-		           
-        return result;
+
+		float absX = this.getAbsX();
+		float absY = this.getAbsY();
+
+		return x >= absX &&
+		       x <= absX + geometry.getWidth() &&
+		       y >= absY &&
+		       y <= absY + geometry.getHeight();
 	}
 
 	@Override
