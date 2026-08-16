@@ -33,6 +33,7 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport {
 	protected int margin;
 	protected int padding;
 	protected EnumAlignment alignment;
+	protected int zIndex;
 
 	public Widget() {
 		
@@ -46,6 +47,7 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport {
 		this.font = new ApplicationFont("Default", 12, false, false);
 		this.toolTipText = "";
 		this.border = new Border(4, new Color(128, 128, 128));
+		this.zIndex = 0;
 		
 	}
 	
@@ -70,7 +72,17 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport {
 	public IUIElement getParent() {
 		return this.parent;
 	}
-	
+
+	@Override
+	public int getZIndex() {
+		return zIndex;
+	}
+
+	@Override
+	public void setZIndex(int zIndex) {
+		this.zIndex = zIndex;
+	}
+
 	@Override
 	public void setWidgetName(String widgetName) {
 		this.widgetName = widgetName;

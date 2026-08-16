@@ -102,6 +102,24 @@ public class ComboBoxTest {
         assertTrue(gamma.isVisible());
     }
 
+    @Test
+    public void openPanelRaisesPopupZIndexAndClosingResetsIt() {
+        ComboBox combo = new ComboBox("");
+        combo.addItem("Alpha");
+        combo.addItem("Beta");
+
+        assertEquals(0, combo.popupPanel.getZIndex(), "закрытая панель на обычном слое");
+
+        combo.getClickListener().onClicked(combo);
+        assertTrue(combo.isOpen());
+        assertEquals(ComboBox.POPUP_Z_INDEX, combo.popupPanel.getZIndex(), "открытая панель поверх остальных");
+
+        PushButton alpha = findRowByLabel(combo, "Alpha");
+        alpha.getClickListener().onClicked(alpha);
+        assertFalse(combo.isOpen());
+        assertEquals(0, combo.popupPanel.getZIndex(), "после закрытия панель возвращается на обычный слой");
+    }
+
     private static PushButton findRowByLabel(ComboBox combo, String label) {
         for (IUIElement child : combo.getChildElements()) {
             if (!(child instanceof Widget)) {

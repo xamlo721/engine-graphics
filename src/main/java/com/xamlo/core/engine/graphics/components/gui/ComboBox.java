@@ -18,6 +18,9 @@ public class ComboBox extends PushButton implements IComboBox {
 
     private static final int ROW_HEIGHT = 32;
 
+    /** Индекс слоя открытой панели: выше всех обычных элементов сцены. */
+    public static final int POPUP_Z_INDEX = 1000;
+
     protected List<String> items;
     protected int selectedIndex;
     protected boolean open;
@@ -127,6 +130,9 @@ public class ComboBox extends PushButton implements IComboBox {
             return;
         }
         popupPanel.setVisible(open);
+        // Открытая панель рисуется поверх остальных элементов сцены; строки
+        // поднимает эффективный z-индекс (наследуются от панели).
+        popupPanel.setZIndex(open ? POPUP_Z_INDEX : 0);
         for (int i = 0; i < itemButtons.size(); i++) {
             itemButtons.get(i).setVisible(open && i < items.size());
         }

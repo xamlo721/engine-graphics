@@ -6,6 +6,7 @@ import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
 import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
+import com.xamlo.core.engine.graphics.api.gui.ZOrder;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
 import com.xamlo.core.engine.graphics.opengl.depth.EnumOpenGLDepthMode;
@@ -70,7 +71,9 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			elementRenderer.draw(obj, scene);
 		}
 		
-		for (IUIElement element : scene.getGuiElements()) {
+		// Отрисовка в z-порядке: элементы с большим индексом слоя поверх остальных,
+		// при равных — в порядке дерева.
+		for (IUIElement element : ZOrder.sorted(scene.getGuiElements())) {
 			uiRenderer.draw(element, scene);
 			textRenderer.draw(element, scene);
 		}
