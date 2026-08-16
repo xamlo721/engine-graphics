@@ -33,6 +33,18 @@ public class FontSystem {
         fontCache.put(key, glyphFont);
         return glyphFont;
     }
+
+    /**
+     * Возвращает глиф-шрифт по ключу, регистрируя его (с AWT-шрифтом того же
+     * семейства/размера/стиля), если он ещё не зарегистрирован.
+     */
+    public UnicodeGlyphFont ensureFont(ApplicationFont key) {
+        if (!isFontRegistered(key)) {
+            int style = Font.PLAIN | (key.isBold() ? Font.BOLD : 0) | (key.isItalic() ? Font.ITALIC : 0);
+            registerFont(key, new Font(key.getFontFamily(), style, key.getFontSize()));
+        }
+        return getFont(key);
+    }
     
     public boolean isFontRegistered(ApplicationFont key) {
         return fontCache.containsKey(key);

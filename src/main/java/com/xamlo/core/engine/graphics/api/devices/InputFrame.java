@@ -22,6 +22,7 @@ public final class InputFrame {
 	private final Set<EnumKeyboardButtons> pushedKeys;
 	private final Set<EnumKeyboardButtons> releasedKeys;
 	private final Set<EnumKeyboardButtons> keysHolding;
+	private final List<Character> charsTyped;
 	private final List<EnumMouseButtons> pushedButtons;
 	private final List<EnumMouseButtons> releasedButtons;
 	private final List<EnumMouseButtons> buttonsHolding;
@@ -33,6 +34,7 @@ public final class InputFrame {
 			Set<EnumKeyboardButtons> pushedKeys,
 			Set<EnumKeyboardButtons> releasedKeys,
 			Set<EnumKeyboardButtons> keysHolding,
+			List<Character> charsTyped,
 			List<EnumMouseButtons> pushedButtons,
 			List<EnumMouseButtons> releasedButtons,
 			List<EnumMouseButtons> buttonsHolding,
@@ -43,6 +45,7 @@ public final class InputFrame {
 		this.pushedKeys = Collections.unmodifiableSet(new HashSet<>(pushedKeys));
 		this.releasedKeys = Collections.unmodifiableSet(new HashSet<>(releasedKeys));
 		this.keysHolding = Collections.unmodifiableSet(new HashSet<>(keysHolding));
+		this.charsTyped = new ArrayList<>(charsTyped);
 		this.pushedButtons = new ArrayList<>(pushedButtons);
 		this.releasedButtons = new ArrayList<>(releasedButtons);
 		this.buttonsHolding = new ArrayList<>(buttonsHolding);
@@ -65,6 +68,10 @@ public final class InputFrame {
 
 	public Set<EnumKeyboardButtons> getKeysHolding() {
 		return keysHolding;
+	}
+
+	public List<Character> getCharsTyped() {
+		return charsTyped;
 	}
 
 	public List<EnumMouseButtons> getPushedButtons() {

@@ -12,8 +12,10 @@ import com.xamlo.core.engine.graphics.font.ApplicationFont;
 
 import com.xamlo.core.engine.graphics.api.gui.IDropTarget;
 import com.xamlo.core.engine.graphics.api.gui.IBorderSupport;
+import com.xamlo.core.engine.graphics.api.gui.IPointer;
+import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
 
-public class Widget implements IWidget, IDropTarget, IBorderSupport {
+public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer {
 
 	private boolean dropActive;
 	private IColor savedDropBackground;
@@ -24,6 +26,7 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport {
 	protected boolean visible;
 	protected boolean isEnable;
 	protected boolean focusable;
+	protected boolean focused;
 	protected AbstractTexture backgroundImage;
 	protected IColor backgroundColor;
 	protected IFont font;
@@ -34,6 +37,7 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport {
 	protected int padding;
 	protected EnumAlignment alignment;
 	protected int zIndex;
+	protected IPointerListener pointerListener;
 
 	public Widget() {
 		
@@ -43,6 +47,7 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport {
 		this.visible = true;
 		this.isEnable = true;
 		this.focusable = false;
+		this.focused = false;
 		this.backgroundColor = new Color(255, 255, 255);
 		this.font = new ApplicationFont("Default", 12, false, false);
 		this.toolTipText = "";
@@ -210,13 +215,33 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport {
 
 
 	@Override
-	public void setFocused(boolean focusable) {
-		this.focusable = focusable;
+	public void setFocused(boolean focused) {
+		this.focused = focused;
 	}
 
 	@Override
 	public boolean isFocused() {
+		return this.focused;
+	}
+
+	@Override
+	public void setFocusable(boolean focusable) {
+		this.focusable = focusable;
+	}
+
+	@Override
+	public boolean isFocusable() {
 		return this.focusable;
+	}
+
+	@Override
+	public void setPointerListener(IPointerListener listener) {
+		this.pointerListener = listener;
+	}
+
+	@Override
+	public IPointerListener getPointerListener() {
+		return this.pointerListener;
 	}
 
 	@Override

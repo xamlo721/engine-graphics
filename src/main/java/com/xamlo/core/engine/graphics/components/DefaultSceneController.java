@@ -9,13 +9,19 @@ import com.xamlo.core.engine.graphics.api.gui.IDragListener;
 import com.xamlo.core.engine.graphics.api.gui.IDraggable;
 import com.xamlo.core.engine.graphics.api.gui.IClickable;
 import com.xamlo.core.engine.graphics.api.gui.IDropTarget;
+import com.xamlo.core.engine.graphics.api.gui.IFrameTickable;
+import com.xamlo.core.engine.graphics.api.gui.IFocusable;
 import com.xamlo.core.engine.graphics.api.gui.IHoverable;
+import com.xamlo.core.engine.graphics.api.gui.IKeyboardHandler;
+import com.xamlo.core.engine.graphics.api.gui.IPointer;
+import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 import com.xamlo.engine.api.devices.EnumMouseButtons;
 import com.xamlo.engine.api.devices.IKeyboard;
 import com.xamlo.engine.api.devices.IMouse;
+import com.xamlo.engine.device.events.CharacterInputEvent;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
 import com.xamlo.engine.device.events.KeyboardHoldEvent;
 import com.xamlo.engine.device.events.KeyboardReleaseEvent;
@@ -46,6 +52,9 @@ public class DefaultSceneController implements ISceneController {
 	private IDraggable draggingElement;
 	private IDropTarget dragTarget;
 	
+	// Элемент, принимающий клавиатурный ввод (устанавливается по клику / ESC снимает)
+	private IUIElement focusedElement;
+	
 	private static final float movAmt = 0.0011f;
 
 	public DefaultSceneController() {
@@ -55,8 +64,36 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = KeyboardClickEvent.class)
 	public void onKeyboardClienEvent(final KeyboardClickEvent event) {
-        // Edge-событие «нажата» — для разовых действий по клавише. Движение и
-        // прочие «пока зажато» состояния обрабатываются в onKeyboardHoldEvent.
+
+        // ESC снимает фокус с элемента ввода
+        if (event.getButton() == EnumKeyboardButtons.KEY_ESCAPE) {
+            clearFocus();
+        }
+
+        // Клавиша уходит элементу в фокусе (текстовое поле и т.п.)
+        if (focusedElement instanceof IKeyboardHandler handler) {
+            boolean ctrl = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_CONTROL, EnumKeyboardButtons.KEY_RIGHT_CONTROL);
+            boolean shift = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_SHIFT, EnumKeyboardButtons.KEY_RIGHT_SHIFT);
+            handler.onKeyPressed(event.getButton(), ctrl, shift);
+        }
+    }
+
+	/**
+	 * Набран символ (включая Unicode) — уходит элементу в фокусе.
+	 */
+	@EventTarget(noParamEvents = CharacterInputEvent.class)
+	public void onCharacterInputEvent(final CharacterInputEvent event) {
+        if (focusedElement instanceof IKeyboardHandler handler) {
+            handler.onCharTyped(event.getCharacter());
+        }
+    }
+
+	/** Зажата ли какая-то из модификаторов (Ctrl/Shift) прямо сейчас. */
+	private boolean isModifierHeld(EnumKeyboardButtons left, EnumKeyboardButtons right) {
+        if (keyboard == null) {
+            return false;
+        }
+        return keyboard.isKeyHold(left) || keyboard.isKeyHold(right);
     }
 	
 	@Override
@@ -68,7 +105,16 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = KeyboardHoldEvent.class)
 	public void onKeyboardHoldEvent(final KeyboardHoldEvent event) {
-		
+
+		// Пока элемент ввода в фокусе, клавиатура «его»: тикаем его (мигание caret)
+		// и не двигаем камерой, чтобы набор текста не управлял миром.
+		if (focusedElement != null) {
+			if (focusedElement instanceof IFrameTickable tickable) {
+				tickable.onFrame();
+			}
+			return;
+		}
+
 		for (EnumKeyboardButtons heldKey : event.getHeldKeys()) {
 			switch (heldKey) {
 				case KEY_W: camera.move(new Vector3f(0.0f, 0.0f, -movAmt)); break;
@@ -90,20 +136,32 @@ public class DefaultSceneController implements ISceneController {
 		
 		switch (event.getButton()) {
 			
-			case MOUSE_BUTTON_1: {
-				
-				IUIElement element = this.scene.findElementAt(event.getxPos(), event.getyPos());
+		case MOUSE_BUTTON_1: {
+			
+			IUIElement element = this.scene.findElementAt(event.getxPos(), event.getyPos());
 
-				if (element == null) {
-					break;
-				}
-
-				if (element instanceof IClickable) {
-					((IClickable)element).getClickListener().onClicked(((IClickable)element));
-				}
-				
+			if (element == null) {
+				clearFocus();
 				break;
 			}
+
+			// Клик по фокусируемому элементу (или его потомку) ставит фокус,
+			// клик мимо — снимает.
+			focusNearestFocusable(element);
+
+			if (element instanceof IClickable) {
+				((IClickable)element).getClickListener().onClicked(((IClickable)element));
+			}
+
+			if (element instanceof IPointer pointer) {
+				IPointerListener listener = pointer.getPointerListener();
+				if (listener != null) {
+					listener.onPointer(element, event.getxPos(), event.getyPos());
+				}
+			}
+			
+			break;
+		}
 			case MOUSE_BUTTON_2: {
 				break;
 			}
@@ -237,6 +295,45 @@ public class DefaultSceneController implements ISceneController {
 				break;
 			}
 		}
+	}
+
+	/**
+	 * Ставит фокус на ближайший фокусируемый предок элемента (включая сам элемент).
+	 * Если фокус уже на этом элементе — ничего не делает.
+	 */
+	private void focusNearestFocusable(IUIElement element) {
+		IUIElement candidate = element;
+		while (candidate != null) {
+			if (candidate instanceof IFocusable focusable && focusable.isFocusable()) {
+				setFocusedElement(candidate);
+				return;
+			}
+			candidate = candidate.hasParent() ? candidate.getParent() : null;
+		}
+		// Клик по нефокусируемому элементу фокус не меняет (снимает только пустота/ESC).
+	}
+
+	/** Программно устанавливает фокус (null — снять). */
+	public void setFocusedElement(IUIElement element) {
+		if (focusedElement == element) {
+			return;
+		}
+		if (focusedElement instanceof IFocusable old) {
+			old.setFocused(false);
+		}
+		focusedElement = element;
+		if (focusedElement instanceof IFocusable now) {
+			now.setFocused(true);
+		}
+	}
+
+	/** Снимает фокус с текущего элемента. */
+	public void clearFocus() {
+		setFocusedElement(null);
+	}
+
+	public IUIElement getFocusedElement() {
+		return focusedElement;
 	}
 
 	@Override

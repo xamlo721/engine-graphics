@@ -16,5 +16,17 @@ public interface IFocusable {
      * @return true - элемент в фокусе, false - элемент не в фокусе
      */
     boolean isFocused();
-    
+
+    /**
+     * Может ли элемент принимать фокус (по клику или программно)
+     * @return true - элемент фокусируемый
+     */
+    boolean isFocusable();
+
+    /**
+     * Устанавливает, может ли элемент принимать фокус
+     * @param focusable true - элемент фокусируемый
+     */
+    void setFocusable(boolean focusable);
+
 }

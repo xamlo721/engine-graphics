@@ -1,6 +1,8 @@
 package com.xamlo.core.engine.graphics.devices;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.xamlo.core.engine.graphics.api.devices.IUpdatableDevice;
@@ -15,6 +17,8 @@ public abstract class AbstractKeyboard implements IKeyboard, IUpdatableDevice {
 	protected Set<EnumKeyboardButtons> keysHolding = new HashSet<EnumKeyboardButtons>();
 	//Клавиши, которые отпустили
 	protected Set<EnumKeyboardButtons> releasedKeys = new HashSet<EnumKeyboardButtons>();
+	//Символы, набранные в текущем тик (GLFW char-callback)
+	protected List<Character> charsTyped = new ArrayList<Character>();
 
 	@Override
 	public boolean isKeyPushed(EnumKeyboardButtons key) {
@@ -47,6 +51,9 @@ public abstract class AbstractKeyboard implements IKeyboard, IUpdatableDevice {
 		return releasedKeys;
 	}
 
-
+	@Override
+	public List<Character> getCharsTyped() {
+		return charsTyped;
+	}
 
 }

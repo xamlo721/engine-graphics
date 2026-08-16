@@ -36,6 +36,7 @@ import com.xamlo.core.engine.graphics.devices.VolatileInputFrameHolder;
 import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullMode;
 import com.xamlo.core.engine.graphics.opengl.cull.EnumOpenGLCullOrder;
 import com.xamlo.core.engine.graphics.opengl.cull.OpenGlCull;
+import com.xamlo.engine.device.events.CharacterInputEvent;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
 import com.xamlo.engine.device.events.KeyboardHoldEvent;
 import com.xamlo.engine.device.events.KeyboardReleaseEvent;
@@ -181,6 +182,7 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.unregister(KeyboardClickEvent.class, sceneController);
 		EventManager.unregister(KeyboardReleaseEvent.class, sceneController);
 		EventManager.unregister(KeyboardHoldEvent.class, sceneController);
+		EventManager.unregister(CharacterInputEvent.class, sceneController);
 		EventManager.unregister(MouseClickEvent.class, sceneController);
 		EventManager.unregister(MouseButtonReleaseEvent.class, sceneController);
 		EventManager.unregister(MouseHoldEvent.class, sceneController);
@@ -218,6 +220,7 @@ public class RenderEngine implements IRenderEngine {
 				keyboard.getPushedKeys(),
 				keyboard.getReleasedKeys(),
 				keyboard.getKeysHolding(),
+				keyboard.getCharsTyped(),
 				mouse.getPushedButtons(),
 				mouse.getReleasedButtons(),
 				mouse.getButtonsHolding(),
@@ -264,6 +267,7 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.register(KeyboardClickEvent.class, sceneController);
 		EventManager.register(KeyboardReleaseEvent.class, sceneController);
 		EventManager.register(KeyboardHoldEvent.class, sceneController);
+		EventManager.register(CharacterInputEvent.class, sceneController);
 		EventManager.register(MouseClickEvent.class, sceneController);
 		EventManager.register(MouseButtonReleaseEvent.class, sceneController);
 		EventManager.register(MouseHoldEvent.class, sceneController);

@@ -1,6 +1,9 @@
 package com.xamlo.core.engine.graphics.devices;
 
+import static org.lwjgl.glfw.GLFW.glfwSetCharCallback;
 import static org.lwjgl.glfw.GLFW.glfwSetKeyCallback;
+
+import org.lwjgl.glfw.GLFWCharCallback;
 
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 
@@ -8,6 +11,12 @@ public class LJWGLKeyboard extends AbstractKeyboard {
 	
 	public LJWGLKeyboard() {
 		glfwSetKeyCallback(LJWGLWindow.getInstance().getWindow(), new KeyboardButtonCallback(this));
+		glfwSetCharCallback(LJWGLWindow.getInstance().getWindow(), new GLFWCharCallback() {
+			@Override
+			public void invoke(long window, int codepoint) {
+				charsTyped.add((char) codepoint);
+			}
+		});
 		
 	}
 
@@ -27,6 +36,7 @@ public class LJWGLKeyboard extends AbstractKeyboard {
         // Очищаем списки нажатых и отпущенных клавиш для следующего кадра
 		pushedKeys.clear();
 		releasedKeys.clear();
+		charsTyped.clear();
 	}
 
 }

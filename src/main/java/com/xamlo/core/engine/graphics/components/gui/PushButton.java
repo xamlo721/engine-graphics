@@ -26,7 +26,6 @@ public class PushButton extends Label implements IPushButton, IDraggable {
     protected boolean buttonVisible;
     protected boolean buttonPressed;
     protected boolean buttonHovered;
-    protected boolean buttonFocused;
     protected IClickListener buttonClickListener;
     protected IDragListener buttonDragListener;
     
@@ -199,16 +198,6 @@ public class PushButton extends Label implements IPushButton, IDraggable {
     @Override
     public boolean isHovered() {
         return buttonHovered;
-    }
-
-    @Override
-    public void setFocused(boolean focused) {
-        this.buttonFocused = focused;
-    }
-
-    @Override
-    public boolean isFocused() {
-        return buttonFocused;
     }
 
     @Override
