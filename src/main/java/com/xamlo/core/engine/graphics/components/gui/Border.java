@@ -1,11 +1,13 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
+import com.xamlo.core.engine.graphics.api.gui.IColor;
+
 public class Border {
 	
     private int thickness;
-    private Color color;
+    private IColor color;
 
-    public Border(int thickness, Color color) {
+    public Border(int thickness, IColor color) {
         this.thickness = thickness;
         this.color = color;
     }
@@ -14,7 +16,7 @@ public class Border {
         return thickness;
     }
 
-    public Color getColor() {
+    public IColor getColor() {
         return color;
     }
     

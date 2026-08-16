@@ -11,8 +11,9 @@ import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.font.ApplicationFont;
 
 import com.xamlo.core.engine.graphics.api.gui.IDropTarget;
+import com.xamlo.core.engine.graphics.api.gui.IBorderSupport;
 
-public class Widget implements IWidget, IDropTarget {
+public class Widget implements IWidget, IDropTarget, IBorderSupport {
 
 	private boolean dropActive;
 	private IColor savedDropBackground;
@@ -253,6 +254,49 @@ public class Widget implements IWidget, IDropTarget {
 	@Override
 	public boolean isDropActive() {
 		return dropActive;
+	}
+
+	protected int cornerRadius;
+
+	/** Задаёт толщину рамки, сохраняя текущий цвет (рендеринг рамки — за счётчиком задач). */
+	@Override
+	public void setBorderSize(int size) {
+		this.border = new Border(size, this.border.getColor());
+	}
+
+	@Override
+	public int getBorderSize() {
+		return border.getThickness();
+	}
+
+	@Override
+	public void setBorderColor(IColor color) {
+		this.border = new Border(border.getThickness(), color);
+	}
+
+	@Override
+	public IColor getBorderColor() {
+		return border.getColor();
+	}
+
+	@Override
+	public void setCornerRadius(int radius) {
+		this.cornerRadius = radius;
+	}
+
+	@Override
+	public int getCornerRadius() {
+		return cornerRadius;
+	}
+
+	@Override
+	public void setBorder(Border border) {
+		this.border = border;
+	}
+
+	@Override
+	public Border getBorder() {
+		return border;
 	}
 
 }

@@ -13,9 +13,12 @@ import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.gui.AbstractUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IBackgroundSupport;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
+import com.xamlo.core.engine.graphics.api.gui.IFillIndicator;
 import com.xamlo.core.engine.graphics.api.gui.IHoverable;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
+import com.xamlo.core.engine.graphics.api.gui.IVisible;
+import com.xamlo.core.engine.graphics.components.gui.EnumOrientation;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
@@ -39,11 +42,16 @@ public class UIElementRenderer {
 
 	
 	public void draw(IUIElement element, IScene scene) {
-		
+
+		// Невидимые элементы не рисуются (скрытые индикаторы, страницы табов, строки закрытого списка).
+		if (element instanceof IVisible && !((IVisible) element).isVisible()) {
+			return;
+		}
+
 		if (!(element instanceof IResizable)) {
 			return;
 		}
-		
+
 	    UIElementGeometry geometry = ((IResizable)element).getGeometry();
 		
 	    final float screenWidth = 1920.0f;
@@ -122,6 +130,32 @@ public class UIElementRenderer {
 		 * indices: Задает смещение, которое необходимо применить к данным индексов для начала рендеринга.
 		 */
 		glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
+
+        // Заполнение внутри границ элемента для IFillIndicator (progress bar / слайдер)
+        if (element instanceof IFillIndicator) {
+            IFillIndicator fill = (IFillIndicator) element;
+            IColor fillColor = fill.getFillColor();
+            float fraction = Math.max(0f, Math.min(1f, fill.getFillFraction()));
+            if (fillColor != null && fraction > 0f) {
+                boolean vertical = fill.getFillDirection() == EnumOrientation.VERTICAL;
+                float fillW = vertical ? geometry.getWidth() : geometry.getWidth() * fraction;
+                float fillH = vertical ? geometry.getHeight() * fraction : geometry.getHeight();
+                float cx = element.getAbsX() + fillW / 2f;
+                float cy = element.getAbsY() + fillH / 2f;
+
+                mvpMatrix.zero()
+                        .setOrtho(left, right, bottom, top, near, far)
+                        .translate(cx, cy, Tz)
+                        .scale(fillW, -fillH, 1.0f);
+
+                debugUIElement.getShader().bind();
+                debugUIElement.getShader().setUniform("mvp", mvpMatrix);
+                debugUIElement.getShader().setUniform("useTexture", false);
+                debugUIElement.getShader().setUniform("backgroundColor", fillColor.getColorVector());
+
+                glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
+            }
+        }
 
 		OpenGLBlend.disable();
 		

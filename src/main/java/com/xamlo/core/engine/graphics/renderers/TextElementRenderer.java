@@ -19,11 +19,13 @@ import com.xamlo.core.engine.graphics.api.gui.IBackgroundSupport;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
+import com.xamlo.core.engine.graphics.api.gui.IVisible;
 import com.xamlo.core.engine.graphics.api.gui.elements.ILabel;
 import com.xamlo.core.engine.graphics.api.gui.font.IFont;
 import com.xamlo.core.engine.graphics.api.gui.font.IFontSupport;
 import com.xamlo.core.engine.graphics.components.GraphicalMesh;
 import com.xamlo.core.engine.graphics.components.ShaderProgram;
+import com.xamlo.core.engine.graphics.components.gui.EnumAlignment;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 import com.xamlo.core.engine.graphics.font.CharacterData;
 import com.xamlo.core.engine.graphics.font.FontAtlas;
@@ -142,7 +144,11 @@ public class TextElementRenderer {
     }
     
 	public void draw(IUIElement element, IScene scene) {
-		
+
+		// Невидимые элементы текстом не рисуются (скрытые страницы табов, строки закрытого списка).
+		if (element instanceof IVisible && !((IVisible) element).isVisible()) {
+			return;
+		}
 
         String text;
         if (debugWidgetNames) {
@@ -193,9 +199,35 @@ public class TextElementRenderer {
 	    textShader.setUniform("textColor", textColorVector);
 	    textShader.setUniform("useTextColor", true);
 
-	    float xCoord = element.getAbsX() + 40;
-	    float yCoord = element.getAbsY() + geometry.getHeight() - 5;
-	    
+	    // Layout-pass: позиция текста вычисляется из выравнивания и padding'а элемента,
+	    // а не из магических смещений. Если выравнивание не задано — legacy-офсеты.
+	    EnumAlignment alignment = null;
+	    int elementPadding = 0;
+	    if (element instanceof IResizable) {
+	        IResizable resizable = (IResizable) element;
+	        alignment = resizable.getAlignment();
+	        elementPadding = resizable.getPadding();
+	    }
+	    final float pad = Math.max(elementPadding, 6f);
+
+	    float textWidth = glyphSet.font.getStringWidth(text);
+	    float absX = element.getAbsX();
+	    float absY = element.getAbsY();
+
+	    float xCoord;
+	    float yCoord;
+	    if (alignment == null) {
+	        xCoord = absX + 40;
+	        yCoord = absY + geometry.getHeight() - 5;
+	    } else {
+	        switch (alignment) {
+	            case LEFT:   xCoord = absX + pad; break;
+	            case RIGHT:  xCoord = absX + geometry.getWidth() - pad - textWidth; break;
+	            default:     xCoord = absX + (geometry.getWidth() - textWidth) / 2f; break;
+	        }
+	        yCoord = absY + geometry.getHeight() - pad;
+	    }
+
 		OpenGLBlend.enable();
 		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);
 	    
