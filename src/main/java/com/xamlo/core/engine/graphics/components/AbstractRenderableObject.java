@@ -19,7 +19,7 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
 	 * 
 	 * Положение объекта в пространстве, заданное матрицей 4х4
 	 * Определяет положение XYZ, повороты Yaw, roll, pich и маштаб scale
-	 * //TODO: исрпвить пример
+	 * //TODO: исправить пример
 	 * 
 	 * {1.0, 0.0, 0.0, 0.0}
 	 * {0.0, 1.0, 0.0, 0.0}
@@ -189,12 +189,12 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
     public Matrix4f getWorldMatrix(Vector3f offset, Vector3f rotation, float scale) {
         worldMatrix
         		//Получить единичную матрицу
-		        //.identity()
+		        .identity()
 		        .translate(offset)
-        		//.rotateX((float)Math.toRadians(rotation.x))
-                //.rotateY((float)Math.toRadians(rotation.y))
-                //.rotateZ((float)Math.toRadians(rotation.z))
-                .scale(geometryDeformation.mul(scale));
+        		.rotateX((float)Math.toRadians(rotation.x))
+                .rotateY((float)Math.toRadians(rotation.y))
+                .rotateZ((float)Math.toRadians(rotation.z))
+                .scale(new Vector3f(geometryDeformation).mul(scale));
         return worldMatrix;
     }
     
@@ -211,7 +211,7 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
 		        .rotateX((float)Math.toRadians(rotation.x))
 		        .rotateY((float)Math.toRadians(rotation.y))
 		        .rotateZ((float)Math.toRadians(rotation.z))
-                .scale(geometryDeformation.mul(scale));
+                .scale(new Vector3f(geometryDeformation).mul(scale));
 
 //        System.out.println("[MATRIX] geometryDef: " + geometryDeformation);
 //        System.out.println("[MATRIX] position: " + position);
@@ -306,7 +306,7 @@ public abstract class AbstractRenderableObject implements IMovable, IRenderable,
     public Matrix4f getScaleMatrix() {
     	Matrix4f rotationMatrix = new Matrix4f()
         .identity()
-        .scale(geometryDeformation.mul(scale));
+        .scale(new Vector3f(geometryDeformation).mul(scale));
 //		System.out.println("[MATRIX] geometryDef: " + geometryDeformation);
 //		System.out.println("[MATRIX] position: " + position);
 //		
