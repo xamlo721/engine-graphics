@@ -2,12 +2,13 @@ package com.xamlo.core.engine.graphics.components.gui;
 
 import com.xamlo.core.engine.graphics.api.gui.IDragListener;
 import com.xamlo.core.engine.graphics.api.gui.IDraggable;
+import com.xamlo.core.engine.graphics.api.gui.ITooltipSupport;
 import com.xamlo.core.engine.graphics.api.gui.IClickListener;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.elements.IPushButton;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 
-public class PushButton extends Label implements IPushButton, IDraggable {
+public class PushButton extends Label implements IPushButton, IDraggable, ITooltipSupport {
 
 	protected IColor buttonColor;
 	protected IColor buttonHoverColor;
@@ -28,6 +29,7 @@ public class PushButton extends Label implements IPushButton, IDraggable {
     protected boolean buttonHovered;
     protected IClickListener buttonClickListener;
     protected IDragListener buttonDragListener;
+protected String toolTipTest = "";
     
     public PushButton(String text) {
     	super(text);
@@ -221,6 +223,12 @@ public class PushButton extends Label implements IPushButton, IDraggable {
         return buttonDragListener;
     }
 
+
+
+@Override
+public String getToolTipText() {
+return toolTipText == null ? "" : toolTipText;
+}
 
     @Override
     public String toString() {

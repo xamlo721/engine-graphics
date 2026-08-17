@@ -16,7 +16,17 @@ import com.xamlo.core.engine.graphics.api.gui.IKeyboardHandler;
 import com.xamlo.core.engine.graphics.api.gui.IPointer;
 import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
 import com.xamlo.core.engine.graphics.api.gui.ITextSelectionHandler;
+import com.xamlo.core.engine.graphics.api.gui.ITooltipSupport;
 import com.xamlo.core.engine.graphics.api.gui.IWheelTarget;
+
+import com.xamlo.core.engine.graphics.components.gui.Border;
+import com.xamlo.core.engine.graphics.components.gui.Color;
+import com.xamlo.core.engine.graphics.components.gui.EnumAlignment;
+import com.xamlo.core.engine.graphics.components.gui.Label;
+import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
+import com.xamlo.core.engine.graphics.font.ApplicationFont;
+import com.xamlo.core.engine.graphics.font.UnicodeGlyphFont;
+import com.xamlo.core.engine.graphics.fontsystem.FontSystem;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
@@ -64,6 +74,16 @@ public class DefaultSceneController implements ISceneController {
 	
 	// Зажата ли левая кнопка мыши — из MouseHoldEvent (для drag-фазы выделения)
 	private boolean leftButtonHeld;
+	
+	// Состояние всплывающей подсказки (живёт на диспетчерском потоке).
+	private Label tooltipBox;
+	private IScene tooltipBoxScene;
+	private IUIElement tooltipOwner;
+	private long hoverStartNanos = -1L;
+	private float lastCursorX;
+	private float lastCursorY;
+	private boolean hasLastCursor = false;
+	protected long tooltipDelayMillis = 600L;
 	
 	private static final float movAmt = 0.0011f;
 
@@ -196,8 +216,7 @@ public class DefaultSceneController implements ISceneController {
 				throw new IllegalArgumentException("Unexpected value: " + event.getButton());
 			}
 		}
-
-
+		noteCursorPosition(event.getxPos(), event.getyPos());
 	}
 
 	@Override
@@ -216,6 +235,7 @@ public class DefaultSceneController implements ISceneController {
 			focusNearestFocusable(target);
 			((ITextSelectionHandler) target).onSelectionStart(event.getxPos(), event.getyPos());
 		}
+		noteCursorPosition(event.getxPos(), event.getyPos());
 	}
 
 	@Override
@@ -225,6 +245,7 @@ public class DefaultSceneController implements ISceneController {
 			((ITextSelectionHandler) selectingElement).onSelectionEnd(event.getxPos(), event.getyPos());
 			selectingElement = null;
 		}
+		noteCursorPosition(event.getxPos(), event.getyPos());
 	}
 
 	/** Прокрутка колеса: дельта уходит ближайшему предку-таргету под курсором. */
@@ -244,6 +265,7 @@ public class DefaultSceneController implements ISceneController {
 	@EventTarget(noParamEvents = MouseHoldEvent.class)
 	public void onMouseHoldEvent(final MouseHoldEvent event) {
 
+		tickTooltip();
 		hudMouseButtonHeld = event.getHeldButtons().contains(EnumMouseButtons.MOUSE_BUTTON_2);
 		leftButtonHeld = event.getHeldButtons().contains(EnumMouseButtons.MOUSE_BUTTON_1);
 	}
@@ -276,6 +298,7 @@ public class DefaultSceneController implements ISceneController {
 			hoverableElement.setHovered(true);
 		}
 		
+		updateFromCursor(event.getXCoord(), event.getYCoord());
 	}
 
 	@Override
@@ -422,4 +445,152 @@ public class DefaultSceneController implements ISceneController {
 		this.scene = scene;
 	}
 
+	// --- Всплывающие подсказки -------------------------------------------------
+
+	private static final int WINDOW_W = 1920;
+	private static final int WINDOW_H = 1080;
+
+	/** Подсказка не перехватывает клики: containsPoint всегда false. */
+	private static final class TooltipLabel extends Label {
+		private TooltipLabel(String text) {
+			super(text);
+		}
+
+		@Override
+		public boolean containsPoint(float x, float y) {
+			return false;
+		}
+	}
+
+	protected long nowNanos() {
+		return System.nanoTime();
+	}
+
+	/** Запоминаем координаты курсора (для тика таймера без движения мыши). */
+	private void noteCursorPosition(float x, float y) {
+		this.lastCursorX = x;
+		this.lastCursorY = y;
+		this.hasLastCursor = true;
+	}
+
+	/** Свежие координаты + hit-test: обновляем цель и таймер подсказки. */
+	private void updateFromCursor(float cx, float cy) {
+		noteCursorPosition(cx, cy);
+		IUIElement under = this.scene != null ? this.scene.findElementAt(cx, cy) : null;
+		applyTooltipTarget(under);
+	}
+
+	/** Смена «владельца» подсказки под курсором или довод таймера показа. */
+	private void applyTooltipTarget(IUIElement under) {
+		ITooltipSupport ownerNode = nearestToolTipOwner(under);
+		String text = ownerNode == null ? "" : ownerNode.getToolTipText();
+		if (text.isEmpty()) {
+			hideTooltipNow();
+			return;
+		}
+		boolean targetChanged = !(ownerNode == tooltipOwner);
+		boolean textStale = tooltipBox == null || !tooltipBox.getText().equals(text);
+		if (targetChanged || textStale) {
+			ensureTooltipBox(text);
+			if (targetChanged) {
+				// Пере-задержка при смене цели — как в MC.
+				tooltipOwner = (IUIElement) ownerNode;
+				hoverStartNanos = nowNanos();
+				tooltipBox.setVisible(false);
+				return;
+			}
+		}
+		maybeShowTooltip();
+	}
+
+	private void maybeShowTooltip() {
+		if (tooltipBox == null || tooltipBox.isVisible()) {
+			return;
+		}
+		long waitedMillis = (nowNanos() - hoverStartNanos) / 1_000_000L;
+		if (waitedMillis < tooltipDelayMillis) {
+			return;
+		}
+		positionAndShowTooltip();
+	}
+
+	/** Каждый кадр из MouseHoldEvent: таймер доходит даже без движения мыши. */
+	protected void tickTooltip() {
+		if (hasLastCursor && (tooltipOwner != null || tooltipBox != null)) {
+			updateFromCursor(lastCursorX, lastCursorY);
+		}
+	}
+
+	/** Ближайший предок под курсором с непустой подсказкой. */
+	private ITooltipSupport nearestToolTipOwner(IUIElement element) {
+		for (IUIElement node = element; node != null; node = node.hasParent() ? node.getParent() : null) {
+			if (node instanceof ITooltipSupport support && !support.getToolTipText().isEmpty()) {
+				return support;
+			}
+		}
+		return null;
+	}
+
+	private void ensureTooltipBox(String text) {
+		boolean recreate = tooltipBox == null || this.scene != tooltipBoxScene;
+		if (recreate) {
+			if (tooltipBox != null && tooltipBoxScene != null) {
+				tooltipBoxScene.getGuiElements().remove(tooltipBox);
+			}
+			TooltipLabel box = new TooltipLabel(text);
+			box.setBackgroundColor(new Color(15, 17, 20, 245));
+			box.setTextColor(new Color(230, 230, 230));
+			box.setFont(new ApplicationFont("Default", 12, false, false));
+			box.setAlignment(EnumAlignment.LEFT);
+			box.setPadding(8);
+			box.setBorder(new Border(1, new Color(148, 148, 148)));
+			box.setVisible(false);
+			box.setZIndex(Integer.MAX_VALUE / 2);
+			this.tooltipBox = box;
+			this.tooltipBoxScene = this.scene;
+			if (this.scene != null) {
+				this.scene.getGuiElements().add(box);
+			}
+		} else if (!tooltipBox.getText().equals(text)) {
+			tooltipBox.setText(text);
+		}
+	}
+
+	private void positionAndShowTooltip() {
+		String text = tooltipBox.getText();
+		float padPx = Math.max(tooltipBox.getPadding(), 6f);
+		int width = (int) measureTooltipTextWidth(text) + (int) (2 * padPx);
+		int height = 26;
+		int x = (int) lastCursorX + 14;
+		int y = (int) lastCursorY + 20;
+		if (x + width > WINDOW_W - 8) {
+			x = (int) lastCursorX - width - 14; // у правого края — слева от курсора
+		}
+		if (y + height > WINDOW_H - 8) {
+			y = (int) lastCursorY - height - 12; // у нижнего края — над курсором
+		}
+		x = Math.max(8, x);
+		y = Math.max(8, y);
+		tooltipBox.resize(new UIElementGeometry(x, y, width, height));
+		tooltipBox.setVisible(true);
+	}
+
+	private float measureTooltipTextWidth(String text) {
+		UnicodeGlyphFont font = FontSystem.getInstance().ensureFont(new ApplicationFont("Default", 12, false, false));
+		return font == null ? Math.max(24f, text.length() * 7f) : font.getStringWidth(text);
+	}
+
+	private void hideTooltipNow() {
+		if (tooltipBox != null) {
+			tooltipBox.setVisible(false);
+		}
+		tooltipOwner = null;
+		hoverStartNanos = -1L;
+	}
+
+	public Label getToolTipBoxForTests() {
+		return tooltipBox;
+	}
+
 }
+

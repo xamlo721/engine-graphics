@@ -11,11 +11,12 @@ import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.font.ApplicationFont;
 
 import com.xamlo.core.engine.graphics.api.gui.IDropTarget;
+import com.xamlo.core.engine.graphics.api.gui.ITooltipSupport;
 import com.xamlo.core.engine.graphics.api.gui.IBorderSupport;
 import com.xamlo.core.engine.graphics.api.gui.IPointer;
 import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
 
-public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer {
+public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, ITooltipSupport {
 
 	private boolean dropActive;
 	private IColor savedDropBackground;
@@ -86,6 +87,16 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer {
 	@Override
 	public void setZIndex(int zIndex) {
 		this.zIndex = zIndex;
+	}
+
+	@Override
+	public String getToolTipText() {
+		return toolTipText == null ? "" : toolTipText;
+	}
+
+	@Override
+	public void setToolTipText(String text) {
+		this.toolTipText = text == null ? "" : text;
 	}
 
 	@Override
