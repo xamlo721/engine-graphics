@@ -60,7 +60,7 @@ public class LJWGLMouse extends AbstractMouse {
         // Удаляем из удерживаемых клавиши, которые были отпущены
         buttonsHolding.removeAll(releasedButtons);
 
-		setScrollOffset(0);
+		resetScrollDelta();
 		pushedButtons.clear();
 
 		releasedButtons.clear();

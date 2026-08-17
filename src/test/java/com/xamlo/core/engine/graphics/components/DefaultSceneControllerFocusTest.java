@@ -19,6 +19,7 @@ import com.xamlo.core.engine.graphics.api.components.ICamera;
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
+import com.xamlo.core.engine.graphics.components.gui.ScrollArea;
 import com.xamlo.core.engine.graphics.components.gui.TextField;
 import com.xamlo.core.engine.graphics.components.gui.Widget;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
@@ -30,6 +31,7 @@ import com.xamlo.engine.device.events.KeyboardHoldEvent;
 import com.xamlo.engine.device.events.MouseClickEvent;
 import com.xamlo.engine.device.events.MouseButtonPressEvent;
 import com.xamlo.engine.device.events.MouseButtonReleaseEvent;
+import com.xamlo.engine.device.events.MouseScrollEvent;
 import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
 
@@ -371,6 +373,96 @@ public class DefaultSceneControllerFocusTest {
         controller.onMouseHoverEvent(new MouseHoverEvent(150, 20, 90, 0));
         assertEquals(startAfterRelease, field.getSelectionStart());
         assertEquals(endAfterRelease, field.getSelectionEnd());
+    }
+
+    // --- Прокрутка колесом (ScrollArea) -------------------------------------
+
+    @Test
+    public void wheelOverContentRoutesToNearestScrollAncestor() {
+        TestScene scene = new TestScene();
+        ScrollArea area = new ScrollArea();
+        area.resize(new UIElementGeometry(100, 100, 200, 100));
+        area.setContentSize(400, 300); // maxY = 200
+        area.setScroll(0f, 200f);      // строка с локальным y=250 видна на abs y≈150
+        Widget row = new Widget(area.getContent());
+        row.resize(new UIElementGeometry(5, 250, 80, 20));
+        scene.add(area);
+        CountingCamera camera = new CountingCamera();
+        DefaultSceneController controller = newController(scene, camera);
+
+        // Курсор над видимой частью строки: событие уходит ближайшему предку-таргету.
+        controller.onMouseScrollEvent(new MouseScrollEvent(120f, 160f, 0f, 1f));
+
+        assertEquals(160f, area.getScrollY(), 1e-6f, "колесо вверх уменьшило прокрутку");
+    }
+
+    @Test
+    public void nestedWheelTargetsRouteToNearestOnly() {
+        TestScene scene = new TestScene();
+        ScrollArea outer = new ScrollArea();
+        outer.resize(new UIElementGeometry(0, 0, 300, 200));
+        outer.setContentSize(600, 400);
+        ScrollArea inner = new ScrollArea(outer.getContent());
+        inner.resize(new UIElementGeometry(20, 20, 100, 80));
+        inner.setContentSize(400, 300); // maxY = 220
+        inner.setScroll(0f, 100f);
+        scene.add(outer);
+        CountingCamera camera = new CountingCamera();
+        DefaultSceneController controller = newController(scene, camera);
+
+        // Точка внутри внутреннего (и внешнего) контейнера: двигается только ближайший.
+        controller.onMouseScrollEvent(new MouseScrollEvent(60f, 50f, 0f, -1f));
+
+        assertEquals(140f, inner.getScrollY(), 1e-6f, "колесо вниз увеличивало прокрутку");
+        assertEquals(0f, outer.getScrollY(), 1e-6f, "внешний таргет не затронут");
+    }
+
+    @Test
+    public void wheelOverEmptySpaceDoesNothing() {
+        TestScene scene = new TestScene();
+        ScrollArea area = new ScrollArea();
+        area.resize(new UIElementGeometry(500, 500, 200, 100));
+        area.setContentSize(400, 300);
+        area.setScroll(0f, 120f);
+        scene.add(area);
+        CountingCamera camera = new CountingCamera();
+        DefaultSceneController controller = newController(scene, camera);
+
+        controller.onMouseScrollEvent(new MouseScrollEvent(10f, 10f, 0f, 1f));
+
+        assertEquals(120f, area.getScrollY(), 1e-6f, "свободное пространство без таргета");
+    }
+
+    // --- Клип hit-test: вышедшее за край содержимое недоступно ---------------
+
+    private ScrollArea clippedAreaWithRow(int contentHeight, int rowLocalY) {
+        ScrollArea area = new ScrollArea();
+        area.resize(new UIElementGeometry(100, 100, 200, 100));
+        area.setContentSize(200, contentHeight);
+        Widget row = new Widget(area.getContent());
+        row.resize(new UIElementGeometry(10, rowLocalY, 60, 20));
+        return area;
+    }
+
+    @Test
+    public void scrolledOutContentIsNotAHitTarget() {
+        TestScene scene = new TestScene();
+        ScrollArea area = clippedAreaWithRow(400, 350); // при scroll=0 строка далеко за нижним краем
+        scene.add(area);
+
+        // Точка внутри самой строки (abs y≈450), но за границей клипающей области.
+        assertNull(scene.findElementAt(140f, 460f), "вышедшая за край строка не ловит курсор");
+    }
+
+    @Test
+    public void scrolledInContentBecomesHitTarget() {
+        TestScene scene = new TestScene();
+        ScrollArea area = clippedAreaWithRow(400, 280);
+        scene.add(area);
+        area.setScroll(0f, 200f); // abs строки ≈ [180..200] — внутри видимой полосы
+
+        IUIElement hit = scene.findElementAt(140f, 190f);
+        assertSame(area.getContent().getChildElements().get(0), hit, "прокрученная в кадр строка доступна");
     }
 
 }

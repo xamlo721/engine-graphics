@@ -170,8 +170,8 @@ public class TextElementRenderer {
 	
 	    // Активируем шейдер текста
 	    textShader.bind();
-	
-	    
+		ClipBinder.apply(textShader, element);
+
 	    Vector4f bgColorVector;
 	    if (element instanceof IBackgroundSupport) {
 	        IColor bgColor = ((IBackgroundSupport)element).getBackgroundColor();

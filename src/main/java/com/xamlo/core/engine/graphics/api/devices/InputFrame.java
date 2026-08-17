@@ -28,7 +28,8 @@ public final class InputFrame {
 	private final List<EnumMouseButtons> buttonsHolding;
 	private final float cursorX;
 	private final float cursorY;
-	private final float scrollOffset;
+	private final float scrollX;
+	private final float scrollY;
 
 	public InputFrame(long sequence,
 			Set<EnumKeyboardButtons> pushedKeys,
@@ -40,7 +41,8 @@ public final class InputFrame {
 			List<EnumMouseButtons> buttonsHolding,
 			float cursorX,
 			float cursorY,
-			float scrollOffset) {
+			float scrollX,
+			float scrollY) {
 		this.sequence = sequence;
 		this.pushedKeys = Collections.unmodifiableSet(new HashSet<>(pushedKeys));
 		this.releasedKeys = Collections.unmodifiableSet(new HashSet<>(releasedKeys));
@@ -51,7 +53,8 @@ public final class InputFrame {
 		this.buttonsHolding = new ArrayList<>(buttonsHolding);
 		this.cursorX = cursorX;
 		this.cursorY = cursorY;
-		this.scrollOffset = scrollOffset;
+		this.scrollX = scrollX;
+		this.scrollY = scrollY;
 	}
 
 	public long getSequence() {
@@ -94,7 +97,11 @@ public final class InputFrame {
 		return cursorY;
 	}
 
-	public float getScrollOffset() {
-		return scrollOffset;
+	public float getScrollX() {
+		return scrollX;
+	}
+
+	public float getScrollY() {
+		return scrollY;
 	}
 }

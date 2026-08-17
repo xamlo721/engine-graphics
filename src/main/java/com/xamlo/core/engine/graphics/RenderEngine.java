@@ -48,6 +48,7 @@ import com.xamlo.engine.device.events.MouseClickEvent;
 import com.xamlo.engine.device.events.MouseDragAndropEvent;
 import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
+import com.xamlo.engine.device.events.MouseScrollEvent;
 
 import net.lenni0451.asmevents.EventManager;
 
@@ -199,6 +200,7 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.unregister(CharacterInputEvent.class, sceneController);
 		EventManager.unregister(MouseClickEvent.class, sceneController);
 		EventManager.unregister(MouseButtonPressEvent.class, sceneController);
+		EventManager.unregister(MouseScrollEvent.class, sceneController);
 		EventManager.unregister(MouseButtonReleaseEvent.class, sceneController);
 		EventManager.unregister(MouseHoldEvent.class, sceneController);
 		EventManager.unregister(MouseHoverEvent.class, sceneController);
@@ -241,7 +243,8 @@ public class RenderEngine implements IRenderEngine {
 				mouse.getButtonsHolding(),
 				mouse.getCursorPosition().x,
 				mouse.getCursorPosition().y,
-				mouse.getScrollOffset());
+				mouse.getScrollDelta().x,
+				mouse.getScrollDelta().y);
 		inputFrames.publish(frame);
 
 		window.update();
@@ -285,6 +288,7 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.register(CharacterInputEvent.class, sceneController);
 		EventManager.register(MouseClickEvent.class, sceneController);
 		EventManager.register(MouseButtonPressEvent.class, sceneController);
+		EventManager.register(MouseScrollEvent.class, sceneController);
 		EventManager.register(MouseButtonReleaseEvent.class, sceneController);
 		EventManager.register(MouseHoldEvent.class, sceneController);
 		EventManager.register(MouseHoverEvent.class, sceneController);

@@ -194,6 +194,14 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer {
 	@Override
 	public boolean containsPoint(float x, float y) {
 
+		// Точка за границей клипающего предка (прокрученное «за край» содержимое)
+		// не может быть целью — то же правило, что и у скисора рендера.
+		int[] clip = ClipContexts.effectiveClippedRect(this);
+		if (clip != null &&
+				(x < clip[0] || x > clip[0] + clip[2] || y < clip[1] || y > clip[1] + clip[3])) {
+			return false;
+		}
+
 		float absX = this.getAbsX();
 		float absY = this.getAbsY();
 

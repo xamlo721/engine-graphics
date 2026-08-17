@@ -18,7 +18,7 @@ public abstract class AbstractMouse implements IMouse, IUpdatableDevice {
 	protected Vector2f cursorPosition;
 	protected Vector2f previousCursorPosition;
 	protected Vector2f cursorPositionDiff;
-	protected float scrollOffset;
+	protected final Vector2f scrollDelta = new Vector2f(0f, 0f);
 	protected boolean showCursor;
 	
 	@Override
@@ -82,13 +82,20 @@ public abstract class AbstractMouse implements IMouse, IUpdatableDevice {
 	}
 
 	@Override
-	public float getScrollOffset() {
-		return scrollOffset;
+	public Vector2f getScrollDelta() {
+		// Защитная копия: callback'и GLFW могут накапливать параллельно со снимком.
+		return new Vector2f(scrollDelta);
 	}
 
 	@Override
-	public void setScrollOffset(float scrollOffset) {
-		this.scrollOffset = scrollOffset;
+	public void addScrollTick(float deltaX, float deltaY) {
+		scrollDelta.x += deltaX;
+		scrollDelta.y += deltaY;
+	}
+
+	/** Сбрасывает накопленную дельту колеса (вызывается из update() после снимка кадра). */
+	protected void resetScrollDelta() {
+		scrollDelta.set(0f, 0f);
 	}
 
 }

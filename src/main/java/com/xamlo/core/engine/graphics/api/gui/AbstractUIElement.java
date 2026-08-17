@@ -43,6 +43,8 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 			objectShader.createUniform("textColor");
 			objectShader.createUniform("useTextColor");
 			objectShader.createUniform("texture_sampler");
+			objectShader.createUniform("useClip");
+			objectShader.createUniform("clipRectNdc");
 
 		} catch (Exception e) {
 			e.printStackTrace();

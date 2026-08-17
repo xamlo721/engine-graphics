@@ -179,7 +179,12 @@ public class ShaderProgram {
 	    uniforms.put(uniformName, uniformLocation);
 	}
 
-	public void setUniform(String uniformName, Matrix4f value) {
+    /** Есть ли зарегистрированный юниформ с таким именем в программе. */
+    public boolean hasUniform(String uniformName) {
+        return uniforms.containsKey(uniformName);
+    }
+
+    public void setUniform(String uniformName, Matrix4f value) {
 		
 	    // Dump the matrix into a float buffer
 	    try (MemoryStack stack = MemoryStack.stackPush()) {

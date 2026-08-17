@@ -11,6 +11,7 @@ import com.xamlo.engine.device.events.MouseClickEvent;
 import com.xamlo.engine.device.events.MouseDragAndropEvent;
 import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
+import com.xamlo.engine.device.events.MouseScrollEvent;
 
 public interface ISceneController {
 	
@@ -42,6 +43,9 @@ public interface ISceneController {
 
 	/** Непрерывный набор удерживаемых кнопок мыши — для «пока зажато»-логики без чтения устройств напрямую. */
 	public void onMouseHoldEvent(final MouseHoldEvent event);
+
+	/** Прокрутка колесом мыши: дельта X+Y и координаты курсора из кадра. */
+	public void onMouseScrollEvent(final MouseScrollEvent event);
 
 	public void onMouseHoverEvent(final MouseHoverEvent event);
 

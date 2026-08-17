@@ -12,7 +12,8 @@ public class MouseScrollCallback extends GLFWScrollCallback {
 
 	@Override
 	public void invoke(long window, double xoffset, double yoffset) {
-		this.mouse.setScrollOffset((float) yoffset);
+		// Один тик несёт обе оси; за кадр их может быть несколько — накапливаем.
+		this.mouse.addScrollTick((float) xoffset, (float) yoffset);
 	}
 
 }

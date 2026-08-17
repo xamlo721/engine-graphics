@@ -16,6 +16,7 @@ import com.xamlo.core.engine.graphics.api.gui.IKeyboardHandler;
 import com.xamlo.core.engine.graphics.api.gui.IPointer;
 import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
 import com.xamlo.core.engine.graphics.api.gui.ITextSelectionHandler;
+import com.xamlo.core.engine.graphics.api.gui.IWheelTarget;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
@@ -32,6 +33,7 @@ import com.xamlo.engine.device.events.MouseClickEvent;
 import com.xamlo.engine.device.events.MouseDragAndropEvent;
 import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
+import com.xamlo.engine.device.events.MouseScrollEvent;
 
 import net.lenni0451.asmevents.event.EventTarget;
 
@@ -222,6 +224,19 @@ public class DefaultSceneController implements ISceneController {
 		if (event.getButton() == EnumMouseButtons.MOUSE_BUTTON_1 && selectingElement != null) {
 			((ITextSelectionHandler) selectingElement).onSelectionEnd(event.getxPos(), event.getyPos());
 			selectingElement = null;
+		}
+	}
+
+	/** Прокрутка колеса: дельта уходит ближайшему предку-таргету под курсором. */
+	@Override
+	@EventTarget(noParamEvents = MouseScrollEvent.class)
+	public void onMouseScrollEvent(final MouseScrollEvent event) {
+		IUIElement element = this.scene.findElementAt(event.getxPos(), event.getyPos());
+		for (IUIElement candidate = element; candidate != null; candidate = candidate.hasParent() ? candidate.getParent() : null) {
+			if (candidate instanceof IWheelTarget target) {
+				target.onScrolled(event.getDeltaX(), event.getDeltaY());
+				return;
+			}
 		}
 	}
 	

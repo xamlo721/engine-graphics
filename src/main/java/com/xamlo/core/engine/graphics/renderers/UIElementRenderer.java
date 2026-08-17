@@ -71,7 +71,8 @@ public class UIElementRenderer {
 	    float Tz = -1.0f; // вместо 0.0f
 
 		debugUIElement.getShader().bind();
-	    
+		ClipBinder.apply(debugUIElement.getShader(), element);
+
 		mvpMatrix.zero()
 				.setOrtho(left, right, bottom, top, near, far)
 				.translate(Tx, Ty, Tz)
