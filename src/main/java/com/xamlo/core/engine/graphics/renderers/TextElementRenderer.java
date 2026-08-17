@@ -154,7 +154,8 @@ public class TextElementRenderer {
         if (debugWidgetNames) {
         	text = element.getWidgetName();
         } else {
-        	text = (element instanceof ILabel) ? ((ILabel) element).getText() : null;
+            // getDisplayText(): в режиме пароля поле отдаёт маску, а не реальный текст.
+        	text = (element instanceof ILabel) ? ((ILabel) element).getDisplayText() : null;
         }
         if (text == null || text.isEmpty()) {
             return;
@@ -214,6 +215,10 @@ public class TextElementRenderer {
 	    float absX = element.getAbsX();
 	    float absY = element.getAbsY();
 
+	    // Горизонтальная прокрутка имеет смысл только для левостороннего текста.
+	    float hScroll = (element instanceof ILabel && alignment == EnumAlignment.LEFT)
+	            ? ((ILabel) element).getHorizontalScroll() : 0f;
+
 	    float xCoord;
 	    float yCoord;
 	    if (alignment == null) {
@@ -221,7 +226,7 @@ public class TextElementRenderer {
 	        yCoord = absY + geometry.getHeight() - 5;
 	    } else {
 	        switch (alignment) {
-	            case LEFT:   xCoord = absX + pad; break;
+	            case LEFT:   xCoord = absX + pad - hScroll; break;
 	            case RIGHT:  xCoord = absX + geometry.getWidth() - pad - textWidth; break;
 	            default:     xCoord = absX + (geometry.getWidth() - textWidth) / 2f; break;
 	        }
@@ -230,10 +235,16 @@ public class TextElementRenderer {
 
 		OpenGLBlend.enable();
 		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);
-	    
+
 	    float width = 0;
-	    
+	    // При скролле не отправляем в конвейер глифы правее видимого окна —
+	    // их всё равно отбросит клип по рамке поля (см. ClipContexts).
+	    final float viewRightPx = hScroll > 0f ? hScroll + Math.max(8f, geometry.getWidth() - 2 * pad) : Float.MAX_VALUE;
+
 	    for (char c : text.toCharArray()) {
+	        if (width >= viewRightPx) {
+	            break;
+	        }
 	        float size = drawCharacter(glyphSet, c, xCoord + width, yCoord, screenWidth, screenHeight);
 	        width += size;
 	    }

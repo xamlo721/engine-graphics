@@ -17,17 +17,24 @@ import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 
 /**
  * Однострочное текстовое поле: ввод символов, caret с миганием, выделение,
- * placeholder, ограничение длины, слушатель изменения.
+ * placeholder, ограничение длины, слушатель изменения, режим пароля и
+ * автоматическая горизонтальная прокрутка длинной строки за caret'ом.
  *
  * Ввод приходит через IKeyboardHandler/onCharTyped (маршрутизация — у
  * DefaultSceneController, элемент должен быть сфокусирован). Клик по полю
- * ставит caret по X-координате (IPointerListener). Буфер обмена и
- * горизонтальная прокрутка в v1 не поддерживаются.
+ * ставит caret по X-координате (IPointerListener), выделение — перетаскиванием
+ * ЛКМ (ITextSelectionHandler), Ctrl+C/X/V/A работают при наличии фокуса.
+ *
+ * Режим пароля маскирует только отрисовку ({@link #getDisplayText()}); реальный
+ * текст доступен через {@link #getText()} и уходит в выделение/буфер обмена как есть.
  */
 public class TextField extends Label implements ITextField, IKeyboardHandler, IFrameTickable, ITextSelectionHandler {
 
     /** Период мигания caret'а (наносекунды). */
     private static final long BLINK_PERIOD_NS = 533_000_000L;
+
+    /** Правый запас автопрокрутки: caret не прижимается к краю на эти пиксели. */
+    protected float autoScrollMargin = 6f;
 
     protected int maxLength;
     protected String placeholder;
@@ -35,6 +42,13 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
     /** Якорь выделения (-1 — выделения нет); выделение = диапазон [anchor, caret). */
     protected int selectionAnchor;
     protected ITextFieldChangeListener changeListener;
+
+    /** Реальное содержимое поля (источник правды для всех операций ввода). */
+    protected String realText;
+    protected boolean passwordMode;
+    protected char maskChar = '•';
+    /** Текущее горизонтальное смещение строки в пикселях. */
+    protected float hScroll;
 
     protected NonInteractiveQuad caret;
     protected NonInteractiveQuad selectionHighlight;
@@ -57,11 +71,13 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
     }
 
     public TextField(String text) {
-        super(text == null ? "" : text);
+        super();
         this.maxLength = DEFAULT_MAX_LENGTH;
         this.placeholder = "";
-        this.caretIndex = getText().length();
+        this.realText = "";
+        this.caretIndex = 0;
         this.selectionAnchor = -1;
+        this.hScroll = 0f;
         this.focusable = true;
         this.setAlignment(EnumAlignment.LEFT);
         this.setPadding(8);
@@ -74,6 +90,7 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
                 placeCaretAtScreenX(x);
             }
         });
+        setText(text);
     }
 
     private void buildIndicators() {
@@ -119,6 +136,7 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         if (placeholderLabel != null) {
             placeholderLabel.resize(new UIElementGeometry(0, 0, geometry.getWidth(), geometry.getHeight()));
         }
+        hScroll = clampHScroll(hScroll);
         updateIndicators();
     }
 
@@ -128,12 +146,111 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         updateIndicators();
     }
 
+    // --- текст / режим пароля ---------------------------------------------
+
+    /** Заменяет содержимое; caret стягивается в границы, выделение сбрасывается. */
     @Override
     public void setText(String text) {
-        super.setText(text == null ? "" : text);
-        caretIndex = Math.min(caretIndex, getText().length());
+        String value = text == null ? "" : text;
+        this.realText = value;
+        caretIndex = Math.min(caretIndex, value.length());
         selectionAnchor = -1;
+        hScroll = clampHScroll(hScroll);
         updateIndicators();
+    }
+
+    /** Реальное содержимое поля (в режиме пароля — не маска). */
+    @Override
+    public String getText() {
+        return realText;
+    }
+
+    /** Строка для отрисовки: маска в режиме пароля, иначе реальный текст. */
+    @Override
+    public String getDisplayText() {
+        if (!passwordMode || realText.isEmpty()) {
+            return realText;
+        }
+        StringBuilder masked = new StringBuilder(realText.length());
+        for (int i = 0; i < realText.length(); i++) {
+            masked.append(maskChar);
+        }
+        return masked.toString();
+    }
+
+    @Override
+    public void setPasswordMode(boolean enabled) {
+        this.passwordMode = enabled;
+        updateIndicators();
+    }
+
+    @Override
+    public boolean isPasswordMode() {
+        return passwordMode;
+    }
+
+    @Override
+    public void setMaskCharacter(char maskChar) {
+        this.maskChar = maskChar == '\u0000' ? '•' : maskChar;
+    }
+
+    @Override
+    public char getMaskCharacter() {
+        return maskChar;
+    }
+
+    // --- горизонтальная прокрутка ------------------------------------------
+
+    private int innerWidthPx() {
+        return Math.max(8, getGeometry().getWidth() - 2 * textPad());
+    }
+
+    /** Максимально допустимое смещение: ширина содержимого минус видимая часть. */
+    protected float maxHorizontalScroll() {
+        String displayed = getDisplayText();
+        if (displayed.isEmpty()) {
+            return 0f;
+        }
+        return Math.max(0f, measureWidth(displayed) - innerWidthPx());
+    }
+
+    private float clampHScroll(float value) {
+        return Math.max(0f, Math.min(value, maxHorizontalScroll()));
+    }
+
+    @Override
+    public float getHorizontalScroll() {
+        return hScroll;
+    }
+
+    /**
+     * Устанавливает смещение вручную (клампится к [0..максимум]). Значение
+     * действует до следующего обновления индикаторов: автопрокрутка за
+     * caret'ом может вернуть окно в позицию, где caret виден.
+     */
+    @Override
+    public void setHorizontalScroll(float pixels) {
+        hScroll = clampHScroll(pixels);
+    }
+
+    /**
+     * Автопрокрутка за caret'ом (как в однострочных полях MC): окно сдвигается
+     * минимально так, чтобы caret остался внутри видимой части строки.
+     */
+    private void autoFollowCaret() {
+        String displayed = getDisplayText();
+        if (displayed.isEmpty()) {
+            hScroll = 0f;
+            return;
+        }
+        float viewW = innerWidthPx();
+        float caretX = prefixWidth(caretIndex, displayed);
+        if (caretX < hScroll) {
+            hScroll = caretX;
+        } else if (caretX + autoScrollMargin > hScroll + viewW) {
+            hScroll = caretX + autoScrollMargin - viewW;
+        }
+        hScroll = clampHScroll(hScroll);
     }
 
     // --- ITextField -------------------------------------------------------
@@ -206,6 +323,7 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         setSelection(0, getText().length());
     }
 
+    /** Выделенный фрагмент РЕАЛЬНОГО текста (в режиме пароли — без маски). */
     @Override
     public String getSelectedText() {
         if (!hasSelection()) {
@@ -213,7 +331,7 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         }
         int from = Math.min(selectionAnchor, caretIndex);
         int to = Math.max(selectionAnchor, caretIndex);
-        return getText().substring(from, to);
+        return realText.substring(from, to);
     }
 
     @Override
@@ -405,18 +523,24 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         selectionAnchor = -1;
     }
 
-    // --- геометрия caret/выделения ----------------------------------------
+    // --- метрики шрифта ----------------------------------------------------
 
     /**
-     * Ширина подстроки текста в пикселях (метрики того же шрифта, которым
-     * рендерится текст поля), 0 если шрифт не резолвится.
+     * Ширина строки по метрикам того же шрифта, которым рендерится текст поля.
+     * Вынесена в protected-метод: тесты подменяют её детерминированной шириной
+     * без загрузки атласа глифов.
      */
-    public float getTextWidth(String text) {
+    protected float measureWidth(String text) {
         if (text == null || text.isEmpty()) {
             return 0f;
         }
         UnicodeGlyphFont font = resolveGlyphFont();
         return font == null ? 0f : font.getStringWidth(text);
+    }
+
+    /** Ширина строки по метрикам шрифта поля (публичное API для внешнего кода). */
+    public final float getTextWidth(String text) {
+        return measureWidth(text);
     }
 
     private UnicodeGlyphFont resolveGlyphFont() {
@@ -427,14 +551,16 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         return FontSystem.getInstance().ensureFont(key);
     }
 
-    /** Ширина первых n символов текущего текста (для геометрии caret/выделения). */
-    private float textWidthUpTo(int index) {
-        String text = getText();
+    /** Ширина первых n символов строки (для геометрии caret/выделения и скролла). */
+    private float prefixWidth(int index, String text) {
         int n = Math.max(0, Math.min(index, text.length()));
         if (n == 0) {
             return 0f;
         }
-        return getTextWidth(text.substring(0, n));
+        if (n >= text.length()) {
+            return measureWidth(text);
+        }
+        return measureWidth(text.substring(0, n));
     }
 
     private int textPad() {
@@ -446,24 +572,41 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         return (System.nanoTime() / BLINK_PERIOD_NS) % 2L == 0L;
     }
 
+    // --- индикаторы --------------------------------------------------------
+
     private void updateIndicators() {
+        autoFollowCaret();
+
         int pad = textPad();
         int height = getGeometry().getHeight();
         int width = getGeometry().getWidth();
         int indicatorHeight = Math.max(8, height - 2 * pad);
         int y = pad;
+        String displayed = getDisplayText();
 
-        float caretX = pad + textWidthUpTo(caretIndex);
-        caret.resize(new UIElementGeometry((int) caretX, y, 1, indicatorHeight));
-        caret.setVisible(isFocused() && (hasSelection() || caretBlinkOn()));
+        // X-координата индикатора: позиция символа минус прокрутка поля.
+        float caretX = pad + prefixWidth(caretIndex, displayed) - hScroll;
+        if (caretX < 0 || caretX > width) {
+            caret.setVisible(false);
+        } else {
+            caret.resize(new UIElementGeometry((int) caretX, y, 1, indicatorHeight));
+            caret.setVisible(isFocused() && (hasSelection() || caretBlinkOn()));
+        }
 
         if (hasSelection()) {
             int from = Math.min(selectionAnchor, caretIndex);
             int to = Math.max(selectionAnchor, caretIndex);
-            float x1 = pad + textWidthUpTo(from);
-            float x2 = pad + textWidthUpTo(to);
-            selectionHighlight.resize(new UIElementGeometry((int) x1, y, Math.max(1, (int) (x2 - x1)), indicatorHeight));
-            selectionHighlight.setVisible(true);
+            float x1 = pad + prefixWidth(from, displayed) - hScroll;
+            float x2 = pad + prefixWidth(to, displayed) - hScroll;
+            // Выделение обрезается рамкой поля — за её края не выходит.
+            float left = Math.max(0f, Math.min(x1, x2));
+            float right = Math.min(width, Math.max(x1, x2));
+            if (right <= left) {
+                selectionHighlight.setVisible(false);
+            } else {
+                selectionHighlight.resize(new UIElementGeometry((int) left, y, Math.max(1, (int) (right - left)), indicatorHeight));
+                selectionHighlight.setVisible(true);
+            }
         } else {
             selectionHighlight.setVisible(false);
         }
@@ -479,18 +622,20 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
 
     /**
      * Индекс символа под X-координатой (экранные координаты): первое положение,
-     * где накопленная ширина текста не меньше смещения. Вне текста — начало/конец.
+     * где накопленная ширина отображаемого текста не меньше смещения с учётом
+     * текущей прокрутки. Вне текста — начало/конец.
      */
     private int charIndexAtScreenX(float screenX) {
-        int pad = textPad();
-        float localX = screenX - getAbsX() - pad;
-        String text = getText();
-        UnicodeGlyphFont font = resolveGlyphFont();
-        if (font == null) {
-            return Math.max(0, Math.min(text.length(), localX < 0 ? 0 : text.length()));
-        }
-        if (localX <= 0) {
+        String text = getDisplayText();
+        float localX = screenX - getAbsX() - textPad() + hScroll;
+        if (localX <= 0f) {
             return 0;
+        }
+        // Ширину каждого префикса меряем метриками того же шрифта, что и рендер:
+        // без загруженного атласа все ширины нулевые — кладём в конец строки.
+        UnicodeGlyphFont font = resolveGlyphFont();
+        if (font == null || font.getStringWidth(text) <= 0f) {
+            return Math.min(text.length(), localX < 0 ? 0 : text.length());
         }
         int lo = 0;
         int hi = text.length();

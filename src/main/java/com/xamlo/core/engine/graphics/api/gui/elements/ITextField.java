@@ -37,4 +37,20 @@ public interface ITextField extends ILabel {
 
     void setChangeListener(ITextFieldChangeListener listener);
 
+    /** Режим пароля: отрисовка заменяет каждый символ маской (реальный текст не меняется). */
+    void setPasswordMode(boolean enabled);
+
+    boolean isPasswordMode();
+
+    /** Символ маски в режиме пароля (по умолчанию «•»). */
+    void setMaskCharacter(char maskChar);
+
+    char getMaskCharacter();
+
+    /** Текущее горизонтальное смещение длинной строки в пикселях (0..максимум). */
+    float getHorizontalScroll();
+
+    /** Устанавливает прокрутку; клампится к [0, максимум по ширине содержимого]. */
+    void setHorizontalScroll(float pixels);
+
 }

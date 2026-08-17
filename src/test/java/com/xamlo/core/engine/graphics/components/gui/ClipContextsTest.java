@@ -8,6 +8,8 @@ import org.joml.Vector4f;
 import org.junit.jupiter.api.Test;
 
 import com.xamlo.core.engine.graphics.api.gui.IClippingElement;
+import com.xamlo.core.engine.graphics.api.gui.IResizable;
+import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.elements.IWidget;
 
 /** Чистые расчёты ClipContexts без GL: эффективный клип-прямоугольник и перевод в NDC. */
@@ -101,6 +103,25 @@ public class ClipContextsTest {
         ClipBox zero = new ClipBox();
         place(zero, 10, 10, 0, 0);
         assertNull(ClipContexts.effectiveClippedRect(new Widget(zero)), "нулевой клипер не обрезает");
+    }
+
+    @Test
+    public void scrolledLabelClipsAgainstItsOwnBounds() {
+        // Прокрученное поле обрезает и себя самого: без предков-клиперов
+        // прямоугольник равен собственной рамке элемента.
+        IUIElement scrolled = new TextField("aaaaaaaaaa") {
+            @Override
+            public float getHorizontalScroll() {
+                return 50f;
+            }
+        };
+        ((IResizable) scrolled).resize(new UIElementGeometry(100, 120, 200, 32));
+        assertArrayEquals(new int[] {100, 120, 200, 32}, ClipContexts.effectiveClippedRect(scrolled));
+
+        // Без прокрутки (и без клиперов выше) — клипа нет вовсе.
+        IUIElement plain = new TextField("short");
+        ((IResizable) plain).resize(new UIElementGeometry(100, 120, 200, 32));
+        assertNull(ClipContexts.effectiveClippedRect(plain));
     }
 
     @Test

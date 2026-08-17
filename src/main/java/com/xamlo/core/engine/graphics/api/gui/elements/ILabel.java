@@ -13,6 +13,20 @@ public interface ILabel extends IWidget,
 
     String getText();
 
+    /**
+     * Строка для отрисовки (по умолчанию совпадает с {@link #getText()}).
+     * Поле ввода в режиме пароля возвращает здесь маску, а реальный текст —
+     * через обычный getter.
+     */
+    default String getDisplayText() {
+        return getText();
+    }
+
+    /** Смещение прокрученного содержимого влево в пикселях (0 — без скролла). */
+    default float getHorizontalScroll() {
+        return 0f;
+    }
+
     void setTextColor(IColor color);
 
     IColor getTextColor();

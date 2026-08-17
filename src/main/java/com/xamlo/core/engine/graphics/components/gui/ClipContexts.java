@@ -5,6 +5,7 @@ import org.joml.Vector4f;
 import com.xamlo.core.engine.graphics.api.gui.IClippingElement;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
+import com.xamlo.core.engine.graphics.api.gui.elements.ILabel;
 
 /**
  * Чистая геометрия скисора UI: эффективный клип-прямоугольник элемента и его
@@ -48,6 +49,21 @@ public final class ClipContexts {
             x1 = Math.min(x1, ax + geom.getWidth());
             y1 = Math.min(y1, ay + geom.getHeight());
             anyClipper = true;
+        }
+
+        // Прокрученная длинная строка не должна вылезать за края самого поля:
+        // пересекаемся и с собственной рамкой элемента.
+        if (element instanceof ILabel label && label.getHorizontalScroll() > 0f) {
+            UIElementGeometry geom = geometryOf(element);
+            if (geom != null) {
+                int ex = Math.round(element.getAbsX());
+                int ey = Math.round(element.getAbsY());
+                x0 = Math.max(x0, ex);
+                y0 = Math.max(y0, ey);
+                x1 = Math.min(x1, ex + geom.getWidth());
+                y1 = Math.min(y1, ey + geom.getHeight());
+                anyClipper = true;
+            }
         }
 
         return (anyClipper && !isDegenerate(x0, y0, x1, y1)) ? new int[] {x0, y0, x1 - x0, y1 - y0} : null;
