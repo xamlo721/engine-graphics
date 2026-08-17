@@ -1,7 +1,11 @@
 package com.xamlo.core.engine.graphics.api.gui.elements;
 
+import java.util.Collections;
+import java.util.List;
+
 import com.xamlo.core.engine.graphics.api.gui.IActivatable;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
+import com.xamlo.core.engine.graphics.api.gui.TextLineSpec;
 import com.xamlo.core.engine.graphics.api.gui.font.IFont;
 import com.xamlo.core.engine.graphics.api.gui.font.IFontSupport;
 
@@ -34,5 +38,13 @@ public interface ILabel extends IWidget,
     void setFont(IFont font);
 
     IFont getFont();
+
+    /**
+     * Стилизированные строки многострочного содержимого. Пустой список означает,
+     * что элемент рисуется обычным однострочным путём через {@link #getDisplayText()}.
+     */
+    default List<TextLineSpec> getStyledLines() {
+        return Collections.emptyList();
+    }
 
 }

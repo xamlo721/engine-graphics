@@ -1,5 +1,8 @@
 package com.xamlo.core.engine.graphics.components;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.joml.Vector3f;
 
 import com.xamlo.core.engine.graphics.api.components.ICamera;
@@ -18,11 +21,13 @@ import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
 import com.xamlo.core.engine.graphics.api.gui.ITextSelectionHandler;
 import com.xamlo.core.engine.graphics.api.gui.ITooltipSupport;
 import com.xamlo.core.engine.graphics.api.gui.IWheelTarget;
+import com.xamlo.core.engine.graphics.api.gui.TextLineSpec;
 
 import com.xamlo.core.engine.graphics.components.gui.Border;
 import com.xamlo.core.engine.graphics.components.gui.Color;
 import com.xamlo.core.engine.graphics.components.gui.EnumAlignment;
 import com.xamlo.core.engine.graphics.components.gui.Label;
+import com.xamlo.core.engine.graphics.components.gui.TextMetrics;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 import com.xamlo.core.engine.graphics.font.ApplicationFont;
 import com.xamlo.core.engine.graphics.font.UnicodeGlyphFont;
@@ -450,8 +455,11 @@ public class DefaultSceneController implements ISceneController {
 	private static final int WINDOW_W = 1920;
 	private static final int WINDOW_H = 1080;
 
-	/** Подсказка не перехватывает клики: containsPoint всегда false. */
+	/** Подсказка не перехватывает клики; многострочный текст (\n) рисуется блоком строк. */
 	private static final class TooltipLabel extends Label {
+
+		private List<TextLineSpec> hintLines;
+
 		private TooltipLabel(String text) {
 			super(text);
 		}
@@ -459,6 +467,25 @@ public class DefaultSceneController implements ISceneController {
 		@Override
 		public boolean containsPoint(float x, float y) {
 			return false;
+		}
+
+		/** Многострочная подсказка распадается на стилизованные строки блока. */
+		void refreshStyling() {
+			String t = getText();
+			if (t.indexOf('\n') < 0) {
+				this.hintLines = null;
+				return;
+			}
+			List<TextLineSpec> lines = new ArrayList<>(t.split("\n").length);
+			for (String part : t.split("\n")) {
+				lines.add(new TextLineSpec(part));
+			}
+			this.hintLines = lines;
+		}
+
+		@Override
+		public List<TextLineSpec> getStyledLines() {
+			return this.hintLines == null ? Collections.emptyList() : this.hintLines;
 		}
 	}
 
@@ -554,13 +581,16 @@ public class DefaultSceneController implements ISceneController {
 		} else if (!tooltipBox.getText().equals(text)) {
 			tooltipBox.setText(text);
 		}
+		((TooltipLabel) tooltipBox).refreshStyling();
 	}
 
 	private void positionAndShowTooltip() {
 		String text = tooltipBox.getText();
 		float padPx = Math.max(tooltipBox.getPadding(), 6f);
-		int width = (int) measureTooltipTextWidth(text) + (int) (2 * padPx);
-		int height = 26;
+		int lineCount = (text.indexOf('\n') < 0) ? 1 : text.split("\n").length;
+		int width = (int) measureTooltipBlockWidth(text) + (int) (2 * padPx);
+		// Однострочная подсказка сохраняет историческую высоту; многострочная растёт по шагу строки.
+		int height = (lineCount > 1) ? (int) Math.ceil(lineCount * tooltipLineAdvance()) + 8 : 26;
 		int x = (int) lastCursorX + 14;
 		int y = (int) lastCursorY + 20;
 		if (x + width > WINDOW_W - 8) {
@@ -575,9 +605,26 @@ public class DefaultSceneController implements ISceneController {
 		tooltipBox.setVisible(true);
 	}
 
-	private float measureTooltipTextWidth(String text) {
+	/** Ширина блока подсказки: максимальная ширина его строк. */
+	private float measureTooltipBlockWidth(String text) {
+		String longest = "";
+		for (String part : text.split("\n")) {
+			if (part.trim().length() > longest.length()) {
+				longest = part.trim();
+			}
+		}
+		if (longest.isEmpty()) {
+			longest = text;
+		}
 		UnicodeGlyphFont font = FontSystem.getInstance().ensureFont(new ApplicationFont("Default", 12, false, false));
-		return font == null ? Math.max(24f, text.length() * 7f) : font.getStringWidth(text);
+		return font == null ? Math.max(24f, longest.length() * 7f) : font.getStringWidth(longest);
+	}
+
+	/** Шаг строки шрифта подсказок — общая метрика с многострочным блоком текста. */
+	private float tooltipLineAdvance() {
+		UnicodeGlyphFont font = FontSystem.getInstance().ensureFont(new ApplicationFont("Default", 12, false, false));
+		float h = (font == null) ? 0f : font.getMaxHeight();
+		return TextMetrics.lineAdvance(h, 12);
 	}
 
 	private void hideTooltipNow() {

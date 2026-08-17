@@ -344,6 +344,38 @@ public class DefaultSceneControllerTooltipTest {
         assertEquals(1038, y, "у нижнего края ящик поднят над курсором");
     }
 
+    @Test
+    public void multilineHintGrowsBoxAndKeepsBothLines() {
+        TestScene scene = new TestScene();
+        newWidget(scene, 350, 250, 60, 20, "Line one\nLine two");
+        TooltipController controller = newController(scene, 0L);
+
+        hover(controller, 380f, 260f);
+        frameTick(controller);
+        frameTick(controller);
+
+        assertTrue(visible(controller));
+        Label box = controller.getToolTipBoxForTests();
+        assertEquals("Line one\nLine two", box.getText(), "обе строки сохраняются в содержимом ящика");
+        int height = ((IResizable) box).getGeometry().getHeight();
+        assertTrue(height > 26 && height < 140, "многострочный ящик выше однострочного: " + height);
+    }
+
+    @Test
+    public void singleLineHintKeepsLegacyHeight() {
+        TestScene scene = new TestScene();
+        newWidget(scene, 350, 250, 60, 20, "Plain hint");
+        TooltipController controller = newController(scene, 0L);
+
+        hover(controller, 380f, 260f);
+        frameTick(controller);
+        frameTick(controller);
+
+        Label box = controller.getToolTipBoxForTests();
+        assertTrue(box != null && box.isVisible());
+        assertEquals(26, ((IResizable) box).getGeometry().getHeight(), "однострочная подсказка не меняет габариты");
+    }
+
     private boolean visible(TooltipController controller) {
         return visible(controller.getToolTipBoxForTests());
     }

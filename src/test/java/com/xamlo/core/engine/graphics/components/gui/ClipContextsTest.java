@@ -125,6 +125,31 @@ public class ClipContextsTest {
     }
 
     @Test
+    public void contentClippingElementIntersectsItsOwnBounds() {
+        // Элемент с включённым клипированием контента обрезает себя сам даже без предков-клиперов.
+        IUIElement clipped = new Widget() {
+            @Override
+            public boolean isContentClipped() {
+                return true;
+            }
+        };
+        ((IResizable) clipped).resize(new UIElementGeometry(100, 120, 200, 32));
+        assertArrayEquals(new int[] {100, 120, 200, 32}, ClipContexts.effectiveClippedRect(clipped));
+
+        // Под клипером-предком — пересечение обеих рамок.
+        ClipBox clipper = new ClipBox();
+        place(clipper, 50, 50, 160, 120);
+        Widget child = new Widget(clipper) {
+            @Override
+            public boolean isContentClipped() {
+                return true;
+            }
+        };
+        place(child, 40, 40, 200, 80); // abs [90..290]x[90..170], рамка клипера [50..210]x[50..170]
+        assertArrayEquals(new int[] {90, 90, 120, 80}, ClipContexts.effectiveClippedRect(child));
+    }
+
+    @Test
     public void fullWindowRectConvertsToFullNdcSquare() {
         Vector4f ndc = ClipContexts.rectToNdc(new int[] {0, 0, ClipContexts.WINDOW_WIDTH, ClipContexts.WINDOW_HEIGHT});
         assertEquals(-1f, ndc.x, 1e-6f);

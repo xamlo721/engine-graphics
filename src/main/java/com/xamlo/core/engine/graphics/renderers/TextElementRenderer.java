@@ -8,6 +8,7 @@ import static org.lwjgl.opengl.GL13.glActiveTexture;
 
 import java.awt.Font;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.joml.Matrix4f;
@@ -20,12 +21,15 @@ import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IVisible;
+import com.xamlo.core.engine.graphics.api.gui.TextLineSpec;
 import com.xamlo.core.engine.graphics.api.gui.elements.ILabel;
 import com.xamlo.core.engine.graphics.api.gui.font.IFont;
 import com.xamlo.core.engine.graphics.api.gui.font.IFontSupport;
 import com.xamlo.core.engine.graphics.components.GraphicalMesh;
 import com.xamlo.core.engine.graphics.components.ShaderProgram;
 import com.xamlo.core.engine.graphics.components.gui.EnumAlignment;
+import com.xamlo.core.engine.graphics.components.gui.TextLayout;
+import com.xamlo.core.engine.graphics.components.gui.TextMetrics;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 import com.xamlo.core.engine.graphics.font.CharacterData;
 import com.xamlo.core.engine.graphics.font.FontAtlas;
@@ -116,7 +120,11 @@ public class TextElementRenderer {
     }
 
     private GlyphSet resolveGlyphSet(IUIElement element) {
-    	ApplicationFont key = determineFontKey(element);
+    	return glyphSetForKey(determineFontKey(element));
+    }
+
+    /** Кэш наборов глифов по ключу шрифта (общий для однострочного и многострочного путей). */
+	private GlyphSet glyphSetForKey(ApplicationFont key) {
         String id = describe(key);
         GlyphSet set = glyphSets.get(id);
         if (set == null) {
@@ -129,6 +137,13 @@ public class TextElementRenderer {
             }
         }
         return set;
+    }
+
+    private ApplicationFont toKey(IFont font) {
+        if (font == null || font.getFontFamily() == null) {
+            return DEFAULT_FONT_KEY;
+        }
+        return new ApplicationFont(font.getFontFamily(), font.getFontSize(), font.isBold(), font.isItalic());
     }
 
     private static String describe(ApplicationFont key) {
@@ -150,16 +165,22 @@ public class TextElementRenderer {
 			return;
 		}
 
-        String text;
-        if (debugWidgetNames) {
-        	text = element.getWidgetName();
-        } else {
-            // getDisplayText(): в режиме пароля поле отдаёт маску, а не реальный текст.
-        	text = (element instanceof ILabel) ? ((ILabel) element).getDisplayText() : null;
-        }
-        if (text == null || text.isEmpty()) {
-            return;
-        }
+		String text;
+		if (debugWidgetNames) {
+			text = element.getWidgetName();
+		} else {
+			// Многострочное содержимое рисуется отдельным проходом со своими стилями строк.
+			List<TextLineSpec> styledLines = (element instanceof ILabel) ? ((ILabel) element).getStyledLines() : null;
+			if (styledLines != null && !styledLines.isEmpty()) {
+				drawMultiLine(element, scene);
+				return;
+			}
+			// getDisplayText(): в режиме пароля поле отдаёт маску, а не реальный текст.
+			text = (element instanceof ILabel) ? ((ILabel) element).getDisplayText() : null;
+		}
+		if (text == null || text.isEmpty()) {
+			return;
+		}
         GlyphSet glyphSet = resolveGlyphSet(element);
  	
  	    this.textShader = debugUIElement.getShader();
@@ -255,14 +276,116 @@ public class TextElementRenderer {
 	    
 	}
 	
+	/**
+	 * Многострочный проход: каждая строка {@link ILabel#getStyledLines()} рисуется своим
+	 * цветом и шрифтом (нулевые поля наследуют значения элемента), сверху вниз от верхнего
+	 * края с учётом padding'а. Позиции строк считает общий расчётчик {@link TextLayout}.
+	 */
+	public void drawMultiLine(IUIElement element, IScene scene) {
+
+	    this.textShader = debugUIElement.getShader();
+
+	    UIElementGeometry geometry = ((IResizable)element).getGeometry();
+
+	    final float screenWidth = 1920.0f;
+	    final float screenHeight = 1080.0f;
+
+	    textShader.bind();
+		ClipBinder.apply(textShader, element);
+
+	    Vector4f bgColorVector = new Vector4f(1, 1, 1, 1);
+	    if (element instanceof IBackgroundSupport) {
+	        IColor bgColor = ((IBackgroundSupport)element).getBackgroundColor();
+	        if (bgColor != null) {
+	            bgColorVector = bgColor.getColorVector();
+	        }
+	    }
+
+	    Vector4f baseTextColor = new Vector4f(1, 1, 1, 1);
+	    if (element instanceof ILabel) {
+	        IColor textColor = ((ILabel) element).getTextColor();
+	        if (textColor != null) {
+	            baseTextColor = textColor.getColorVector();
+	        }
+	    }
+
+	    textShader.setUniform("backgroundColor", bgColorVector);
+	    textShader.setUniform("useTexture", true);
+	    textShader.setUniform("hoverColor", bgColorVector);
+	    textShader.setUniform("hoverIntensity", 0.0f);
+	    textShader.setUniform("textColor", baseTextColor);
+	    textShader.setUniform("useTextColor", true);
+
+	    EnumAlignment alignment = ((IResizable)element).getAlignment();
+	    int elementPadding = ((IResizable)element).getPadding();
+	    final float pad = Math.max(elementPadding, 6f);
+
+	    List<TextLineSpec> specs = ((ILabel)element).getStyledLines();
+	    ApplicationFont elementKey = determineFontKey(element);
+
+	    TextLayout.Measure measure = new TextLayout.Measure() {
+			@Override
+			public float widthOf(String text) {
+				return glyphSetForKey(elementKey).font.getStringWidth(text);
+			}
+
+			@Override
+			public float widthOf(TextLineSpec context, String text) {
+				ApplicationFont key = (context == null || context.getLineFont() == null)
+						? elementKey : toKey(context.getLineFont());
+				return glyphSetForKey(key).font.getStringWidth(text);
+			}
+		};
+
+	    TextLayout.LineAdvance advance = spec -> lineAdvanceFor(spec, elementKey);
+
+	    List<TextLayout.PlacedLine> placed = TextLayout.layout(
+	            element.getAbsX(), element.getAbsY(), geometry.getWidth(), geometry.getHeight(),
+	            pad, alignment, false, specs, measure, advance);
+
+		OpenGLBlend.enable();
+		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);
+
+	    for (TextLayout.PlacedLine row : placed) {
+	        GlyphSet set = glyphSetForKey(row.lineFont == null ? elementKey : toKey(row.lineFont));
+	        Vector4f colorVector = baseTextColor;
+	        if (row.color != null) {
+	            colorVector = row.color.getColorVector();
+	        }
+	        textShader.setUniform("textColor", colorVector);
+
+	        float width = 0;
+	        for (char c : row.text.toCharArray()) {
+	            float size = drawCharacter(set, c, row.xLeftPx + width, row.yBottomPx, screenWidth, screenHeight);
+	            width += size;
+	        }
+	    }
+
+		OpenGLBlend.disable();
+
+	    textShader.unbind();
+	}
+
+	private float lineAdvanceFor(TextLineSpec spec, ApplicationFont fallbackKey) {
+		ApplicationFont key = (spec.getLineFont() == null) ? fallbackKey : toKey(spec.getLineFont());
+		GlyphSet set = glyphSetForKey(key);
+		float h = (set.font == null) ? 0f : set.font.getMaxHeight();
+		int size = (key == null || key.getFontSize() <= 0) ? 12 : key.getFontSize();
+		return TextMetrics.lineAdvance(h, size);
+	}
+
 	private float drawCharacter(GlyphSet glyphSet, char character, float xCoord, float yCoord, final float screenWidth, final float screenHeight) {
-		
+
  		UnicodeGlyphFont font = glyphSet.font;
         GlyphPage glyphPage = font.getGlyphPage(character);
 
-	    CharacterData characterData = glyphPage.getCharacterData(character);
+ 	    CharacterData characterData = glyphPage.getCharacterData(character);
+	    if (characterData == null) {
+	        // Символ без глифа (например, управляющий): рисуем пустоту, не двигая курсор строки.
+	        return 0f;
+	    }
 
-		GraphicalMesh mesh = glyphSet.atlas.getGlyphMesh(character);
+ 		GraphicalMesh mesh = glyphSet.atlas.getGlyphMesh(character);
 		
 	    final float left = 0;
 	    final float right =  screenWidth;

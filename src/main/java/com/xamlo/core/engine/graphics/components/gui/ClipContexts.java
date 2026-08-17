@@ -51,9 +51,11 @@ public final class ClipContexts {
             anyClipper = true;
         }
 
-        // Прокрученная длинная строка не должна вылезать за края самого поля:
-        // пересекаемся и с собственной рамкой элемента.
-        if (element instanceof ILabel label && label.getHorizontalScroll() > 0f) {
+        // Контент не должен вылезать за края самого элемента. Правило включается явно
+        // флагом isContentClipped(); исторически так же клипится прокрученное поле ввода.
+        boolean selfClip = element.isContentClipped()
+                || ((element instanceof ILabel label) && label.getHorizontalScroll() > 0f);
+        if (selfClip) {
             UIElementGeometry geom = geometryOf(element);
             if (geom != null) {
                 int ex = Math.round(element.getAbsX());
