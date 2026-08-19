@@ -41,6 +41,7 @@ public class RadioButton extends Label implements IRadioButton, IClickable {
 
     public RadioButton(String text, String group) {
         super(text);
+        this.focusable = true;
         this.backgroundColor = new Color(0, 0, 0, 96);
         this.checked = false;
         setGroup(group);
@@ -88,6 +89,15 @@ public class RadioButton extends Label implements IRadioButton, IClickable {
     @Override
     public boolean isChecked() {
         return this.checked;
+    }
+
+    /** Клавиатурная активация: выбор элемента через click-listener'ы (как клик). */
+    @Override
+    public void activate() {
+        if (!isEnabled()) {
+            return;
+        }
+        getClickListener().onClicked(this);
     }
 
     @Override

@@ -2,12 +2,15 @@ package com.xamlo.core.engine.graphics.components;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import org.joml.Vector3f;
 
 import com.xamlo.core.engine.graphics.api.components.ICamera;
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneController;
+import com.xamlo.core.engine.graphics.api.gui.IActivatable;
 import com.xamlo.core.engine.graphics.api.gui.IDragListener;
 import com.xamlo.core.engine.graphics.api.gui.IDraggable;
 import com.xamlo.core.engine.graphics.api.gui.IClickable;
@@ -20,8 +23,10 @@ import com.xamlo.core.engine.graphics.api.gui.IPointer;
 import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
 import com.xamlo.core.engine.graphics.api.gui.ITextSelectionHandler;
 import com.xamlo.core.engine.graphics.api.gui.ITooltipSupport;
+import com.xamlo.core.engine.graphics.api.gui.IVisible;
 import com.xamlo.core.engine.graphics.api.gui.IWheelTarget;
 import com.xamlo.core.engine.graphics.api.gui.TextLineSpec;
+import com.xamlo.core.engine.graphics.api.gui.ZOrder;
 
 import com.xamlo.core.engine.graphics.components.gui.Border;
 import com.xamlo.core.engine.graphics.components.gui.Color;
@@ -100,16 +105,106 @@ public class DefaultSceneController implements ISceneController {
 	@EventTarget(noParamEvents = KeyboardClickEvent.class)
 	public void onKeyboardClienEvent(final KeyboardClickEvent event) {
 
+        final EnumKeyboardButtons key = event.getButton();
+        boolean ctrl  = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_CONTROL, EnumKeyboardButtons.KEY_RIGHT_CONTROL);
+        boolean shift = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_SHIFT, EnumKeyboardButtons.KEY_RIGHT_SHIFT);
+
         // ESC снимает фокус с элемента ввода
-        if (event.getButton() == EnumKeyboardButtons.KEY_ESCAPE) {
+        if (key == EnumKeyboardButtons.KEY_ESCAPE) {
             clearFocus();
+        } else if (key == EnumKeyboardButtons.KEY_TAB && !ctrl && this.scene != null) {
+            // Tab / Shift+Tab циклично ходят по фокусируемым элементам сцены;
+            // Ctrl+TAB не перехватывается и уходит обработчику как обычная клавиша.
+            cycleTabFocus(shift);
+        } else if (!ctrl && isActivationKey(key)) {
+            // Enter/NumpadEnter/Space активируют элемент в фокусе (IActivatable).
+            activateFocusedIfPossible();
         }
 
         // Клавиша уходит элементу в фокусе (текстовое поле и т.п.)
         if (focusedElement instanceof IKeyboardHandler handler) {
-            boolean ctrl = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_CONTROL, EnumKeyboardButtons.KEY_RIGHT_CONTROL);
-            boolean shift = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_SHIFT, EnumKeyboardButtons.KEY_RIGHT_SHIFT);
-            handler.onKeyPressed(event.getButton(), ctrl, shift);
+            handler.onKeyPressed(key, ctrl, shift);
+        }
+    }
+
+	/** Клавиши «нажать» для активации сфокусированного элемента. */
+	private static boolean isActivationKey(EnumKeyboardButtons key) {
+        return key == EnumKeyboardButtons.KEY_ENTER
+                || key == EnumKeyboardButtons.KEY_KP_ENTER
+                || key == EnumKeyboardButtons.KEY_SPACE;
+    }
+
+	/** Элемент может принимать взаимодействие: видим и не выключен (если такие флаги есть). */
+	private static boolean interactionAllowed(IUIElement element) {
+        if (element instanceof IVisible visible && !visible.isVisible()) {
+            return false;
+        }
+        if (element instanceof IActivatable activatable && !activatable.isEnabled()) {
+            return false;
+        }
+        return true;
+    }
+
+	/** Активирует элемент в фокусе, если он поддерживает активацию и доступен. */
+	private void activateFocusedIfPossible() {
+        IUIElement target = this.focusedElement;
+        if (!(target instanceof IActivatable activatable)) {
+            return;
+        }
+        if (!interactionAllowed(target)) {
+            return;
+        }
+        activatable.activate();
+    }
+
+	/**
+	 * Циклически переставляет клавиатурный фокус по фокусируемым элементам сцены:
+	 * Tab — по порядку списка, Shift+Tab — против него, на концах обход заворачивается.
+	 */
+	private void cycleTabFocus(boolean backwards) {
+        List<IUIElement> candidates = collectFocusCycleCandidates();
+        int count = candidates.size();
+        if (count == 0) {
+            return;
+        }
+        int current = -1;
+        for (int i = 0; i < count; i++) {
+            if (candidates.get(i) == focusedElement) {
+                current = i;
+                break;
+            }
+        }
+        // Фокуса ещё нет или текущий элемент выбыл из цикла: Tab стартует с первого,
+        // Shift+Tab — с последнего.
+        int next = current < 0 ? (backwards ? count - 1 : 0)
+                              : ((current + (backwards ? -1 : 1) + count) % count);
+        setFocusedElement(candidates.get(next));
+    }
+
+	/**
+	 * Кандидаты для tab-цикла: все элементы реестра сцены и их потомки (с дедупликацией),
+	 * отфильтрованные по «фокусируем + видим + не выключен», отсортированные по эффективному
+	 * z-индексу ({@link ZOrder}). Стабильная сортировка сохраняет порядок обхода дерева при
+	 * равных индексах — тот же порядок, что у отрисовки элементов со слоями одного уровня.
+	 */
+	private List<IUIElement> collectFocusCycleCandidates() {
+        Set<IUIElement> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        List<IUIElement> found = new ArrayList<>();
+        for (IUIElement root : this.scene.getGuiElements()) {
+            visitForFocus(root, seen, found);
+        }
+        return ZOrder.sorted(found);
+    }
+
+	private void visitForFocus(IUIElement element, Set<IUIElement> seen, List<IUIElement> out) {
+        if (!seen.add(element)) {
+            return;
+        }
+        if (element instanceof IFocusable focusable && focusable.isFocusable() && interactionAllowed(element)) {
+            out.add(element);
+        }
+        for (IUIElement child : element.getChildElements()) {
+            visitForFocus(child, seen, out);
         }
     }
 

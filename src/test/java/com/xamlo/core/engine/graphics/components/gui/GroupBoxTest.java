@@ -13,7 +13,8 @@ public class GroupBoxTest {
     @Test
     public void widgetDelegatesIBorderSupportToItsBorderField() {
         Widget w = new Widget();
-        assertEquals(4, w.getBorderSize(), "толщина рамки по умолчанию из конструктора");
+        // Рамка не рисуется до явного setBorder*/setCornerRadius — по умолчанию толщина ноль.
+        assertEquals(0, w.getBorderSize(), "по умолчанию рамка выключена (толщина 0)");
         assertNotNull(w.getBorderColor());
 
         Color borderColor = new Color(10, 20, 30);

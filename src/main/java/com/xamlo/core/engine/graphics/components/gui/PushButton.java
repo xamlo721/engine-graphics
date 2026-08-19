@@ -35,10 +35,31 @@ protected String toolTipTest = "";
     	super(text);
     	this.buttonVisible = true;
     	this.buttonEnabled = true;
+        this.focusable = true;
     }
-    
+
     public PushButton() {
     	super();
+    	this.buttonVisible = true;
+    	this.buttonEnabled = true;
+        this.focusable = true;
+    }
+
+    /**
+     * Клавиатурная активация: тот же путь, что клик мыши — пульс pressed-состояния
+     * и вызов click-listener'а (если он задан). Выключенная кнопка не активируется.
+     */
+    @Override
+    public void activate() {
+        if (!isEnabled()) {
+            return;
+        }
+        setPressed(true);
+        IClickListener listener = getClickListener();
+        if (listener != null) {
+            listener.onClicked(this);
+        }
+        setPressed(false);
     }
     
     

@@ -52,7 +52,8 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, I
 		this.backgroundColor = new Color(255, 255, 255);
 		this.font = new ApplicationFont("Default", 12, false, false);
 		this.toolTipText = "";
-		this.border = new Border(4, new Color(128, 128, 128));
+		// Рамка по умолчанию не рисуется: элемент получает её явным вызовом setBorder*/setCornerRadius.
+		this.border = new Border(0, new Color(128, 128, 128));
 		this.zIndex = 0;
 		
 	}
@@ -314,7 +315,7 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, I
 
 	protected int cornerRadius;
 
-	/** Задаёт толщину рамки, сохраняя текущий цвет (рендеринг рамки — за счётчиком задач). */
+	/** Задаёт толщину рамки, сохраняя текущий цвет; рамку рисует UIElementRenderer при size > 0. */
 	@Override
 	public void setBorderSize(int size) {
 		this.border = new Border(size, this.border.getColor());

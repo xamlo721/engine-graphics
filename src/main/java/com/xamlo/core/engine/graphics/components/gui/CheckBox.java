@@ -29,6 +29,7 @@ public class CheckBox extends Label implements ICheckbox, IClickable {
 
     public CheckBox(String text) {
         super(text);
+        this.focusable = true;
         this.backgroundColor = new Color(0, 0, 0, 96);
         this.checked = false;
 
@@ -56,6 +57,15 @@ public class CheckBox extends Label implements ICheckbox, IClickable {
     @Override
     public boolean isChecked() {
         return this.checked;
+    }
+
+    /** Клавиатурная активация: переключение состояния через click-listener'ы (как клик). */
+    @Override
+    public void activate() {
+        if (!isEnabled()) {
+            return;
+        }
+        getClickListener().onClicked(this);
     }
 
     @Override

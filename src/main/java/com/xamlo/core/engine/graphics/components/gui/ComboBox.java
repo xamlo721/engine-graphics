@@ -84,6 +84,15 @@ public class ComboBox extends PushButton implements IComboBox {
         return open;
     }
 
+    /** Клавиатурная активация: раскрывает/скрывает панель вариантов (как клик). */
+    @Override
+    public void activate() {
+        if (!isEnabled()) {
+            return;
+        }
+        getClickListener().onClicked(this);
+    }
+
     public void setSelectionListener(IItemSelectionListener listener) {
         this.selectionListener = listener;
     }

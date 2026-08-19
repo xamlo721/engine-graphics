@@ -16,6 +16,7 @@ import org.joml.Vector4f;
 
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.gui.AbstractUIElement;
+import com.xamlo.core.engine.graphics.api.gui.IActivatable;
 import com.xamlo.core.engine.graphics.api.gui.IBackgroundSupport;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
@@ -213,6 +214,7 @@ public class TextElementRenderer {
 	            textColorVector = textColor.getColorVector();
 	        }
 	    }
+	    textColorVector = effectiveTextColor(element, textColorVector);
 
 	    textShader.setUniform("backgroundColor", bgColorVector);
 	    textShader.setUniform("useTexture", true);
@@ -308,6 +310,8 @@ public class TextElementRenderer {
 	            baseTextColor = textColor.getColorVector();
 	        }
 	    }
+	    // Выключенный элемент красится своим disabled-цветом вместо обычного цвета текста.
+	    baseTextColor = effectiveTextColor(element, baseTextColor);
 
 	    textShader.setUniform("backgroundColor", bgColorVector);
 	    textShader.setUniform("useTexture", true);
@@ -366,7 +370,16 @@ public class TextElementRenderer {
 	    textShader.unbind();
 	}
 
-	private float lineAdvanceFor(TextLineSpec spec, ApplicationFont fallbackKey) {
+	/** Цвет текста элемента с учётом выключенного состояния (disabled-color перекрывает обычный). */
+	private static Vector4f effectiveTextColor(IUIElement element, Vector4f normalColor) {
+        if (!(element instanceof IActivatable activatable) || activatable.isEnabled()) {
+            return normalColor;
+        }
+        IColor disabledColor = activatable.getDisabledColor();
+        return (disabledColor == null) ? normalColor : disabledColor.getColorVector();
+    }
+
+    private float lineAdvanceFor(TextLineSpec spec, ApplicationFont fallbackKey) {
 		ApplicationFont key = (spec.getLineFont() == null) ? fallbackKey : toKey(spec.getLineFont());
 		GlyphSet set = glyphSetForKey(key);
 		float h = (set.font == null) ? 0f : set.font.getMaxHeight();

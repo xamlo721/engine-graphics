@@ -1,5 +1,8 @@
 package com.xamlo.core.engine.graphics.api.gui;
 
+/**
+ * Элемент с состоянием доступности и клавиатурной активацией.
+ */
 public interface IActivatable {
 
     /**
@@ -29,5 +32,15 @@ public interface IActivatable {
      * @return Цвет элемента при отключении
      */
     IColor getDisabledColor();
+
+    /**
+     * Edge-событие «элемент нажат»: то же действие, что клик мыши по этому
+     * элементу (кнопка — её click-listener'ы, чекбокс — переключение и т.д.).
+     * Контроллер сцены вызывает его для сфокусированного элемента по Enter /
+     * NumpadEnter / Space; реализация обязана игнорировать вызов, если элемент
+     * выключен ({@link #isEnabled()} == false). По умолчанию ничего не делает.
+     */
+    default void activate() {
+    }
 
 }
