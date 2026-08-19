@@ -20,11 +20,15 @@ import com.xamlo.core.engine.graphics.api.gui.IFillIndicator;
 import com.xamlo.core.engine.graphics.api.gui.IFocusable;
 import com.xamlo.core.engine.graphics.api.gui.IHoverable;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
+import com.xamlo.core.engine.graphics.api.gui.IStretchedBackground;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IVisible;
+import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.components.gui.Color;
+import com.xamlo.core.engine.graphics.components.gui.EnumImageStretch;
 import com.xamlo.core.engine.graphics.components.gui.EnumOrientation;
 import com.xamlo.core.engine.graphics.components.gui.FrameRects;
+import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
@@ -39,6 +43,9 @@ public class UIElementRenderer {
 
 	private Matrix4f mvpMatrix = new Matrix4f();
 
+	/** Батч квадов для режимов растяжения фона, отличных от FILL (E3). */
+	private final TexturedQuadBatch texturedBatch = new TexturedQuadBatch();
+
 	AbstractUIElement debugUIElement;
 	
 	public void init() {
@@ -46,9 +53,11 @@ public class UIElementRenderer {
 			//NO-OP DEBUG
 		};
         debugUIElement.init();
+        texturedBatch.init();
 	}
 	
 	public void release() {
+		texturedBatch.release();
 		debugUIElement.release();		
 	}
 
@@ -92,8 +101,24 @@ public class UIElementRenderer {
 
 	    debugUIElement.getShader().setUniform("mvp", mvpMatrix);
 	    
-        boolean hasTexture = element instanceof IBackgroundSupport && ((IBackgroundSupport)element).hasBackgroundImage();
-        debugUIElement.getShader().setUniform("useTexture", hasTexture);
+        final IBackgroundSupport background = (element instanceof IBackgroundSupport b) ? b : null;
+        final AbstractTexture texture = (background != null && background.hasBackgroundImage())
+                ? background.getBackgroundImage() : null;
+        // E3: режим растяжения текстурированного фона. По умолчанию FILL — исторический путь unit-mesh'а не меняется.
+        final IStretchedBackground stretched = (element instanceof IStretchedBackground s) ? s : null;
+        List<ImageStretchLayout.StretchPiece> pieces = java.util.Collections.emptyList();
+        boolean plainFillPath = true;
+        if (texture != null) {
+            EnumImageStretch mode = (stretched != null) ? stretched.getBackgroundStretchMode() : EnumImageStretch.FILL;
+            ImageStretchLayout.NinePatchInsets insets = (stretched != null)
+                    ? stretched.getNinePatchInsets() : ImageStretchLayout.NinePatchInsets.NONE;
+            pieces = ImageStretchLayout.layout(mode, texture.getWidth(), texture.getHeight(),
+                    geometry.getWidth(), geometry.getHeight(), insets);
+            plainFillPath = ImageStretchLayout.isPlainFill(pieces, texture.getWidth(), texture.getHeight(),
+                    geometry.getWidth(), geometry.getHeight());
+        }
+
+        debugUIElement.getShader().setUniform("useTexture", texture != null);
 
         Vector4f bgColorVector;
         if (element instanceof IBackgroundSupport) {
@@ -126,23 +151,31 @@ public class UIElementRenderer {
         }
         
 		debugUIElement.getMesh().bind();
-	    
-		if (element instanceof IBackgroundSupport && ((IBackgroundSupport)element).hasBackgroundImage()) {
+
+		if (texture != null) {
 			glActiveTexture(GL_TEXTURE0);
-			((IBackgroundSupport)element).getBackgroundImage().bind();
+			texture.bind();
 		}
 
 		OpenGLBlend.enable();
 		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);
-        
-		
-		/**
-		 * mode: Задает примитивы для рендеринга, в данном случае треугольники. Здесь никаких изменений.
-		 * count: Указывает количество элементов, которые должны быть отрисованы.
-		 * type: Указывает тип значения в данных индексов. В данном случае мы используем целые числа.
-		 * indices: Задает смещение, которое необходимо применить к данным индексов для начала рендеринга.
-		 */
-		glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
+
+
+        // Исторический путь: цветной квад или FILL-фон — побайтово то же самое, что до E3.
+		boolean useLegacyQuad = (texture == null) || plainFillPath;
+		if (useLegacyQuad) {
+			/**
+			 * mode: Задает примитивы для рендеринга, в данном случае треугольники. Здесь никаких изменений.
+			 * count: Указывает количество элементов, которые должны быть отрисованы.
+			 * type: Указывает тип значения в данных индексов. В данном случае мы используем целые числа.
+			 * indices: Задает смещение, которое необходимо применить к данным индексов для начала рендеринга.
+			 */
+			glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
+		} else {
+			texturedBatch.draw(debugUIElement.getShader(), left, right, bottom, top, near, far,
+					element.getAbsX(), element.getAbsY(),
+					texture.getWidth(), texture.getHeight(), pieces);
+		}
 
         // Заполнение внутри границ элемента для IFillIndicator (progress bar / слайдер)
         if (element instanceof IFillIndicator) {

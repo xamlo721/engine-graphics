@@ -2,6 +2,7 @@ package com.xamlo.core.engine.graphics.components;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
@@ -43,6 +44,9 @@ import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 import com.xamlo.engine.api.devices.EnumMouseButtons;
 import com.xamlo.engine.api.devices.IKeyboard;
 import com.xamlo.engine.api.devices.IMouse;
+import com.xamlo.engine.device.actions.ActionBinding;
+import com.xamlo.engine.device.actions.ActionRegistry;
+import com.xamlo.engine.device.actions.IKeyCaptureTarget;
 import com.xamlo.engine.device.events.CharacterInputEvent;
 import com.xamlo.engine.device.events.KeyboardClickEvent;
 import com.xamlo.engine.device.events.KeyboardHoldEvent;
@@ -79,6 +83,15 @@ public class DefaultSceneController implements ISceneController {
 	// Элемент, принимающий клавиатурный ввод (устанавливается по клику / ESC снимает)
 	private IUIElement focusedElement;
 	
+	// Реестр ремаппабельных действий (E7): необязательный хук в этот же поток событий.
+	private ActionRegistry actionRegistry;
+	
+	// Состояние модального захвата следующей клавиши (E6): вооружённая цель и штамп
+	// дебаунса после коммита/отмены — чтобы само событие не запустило глобальные шорткаты.
+	private IKeyCaptureTarget keyCaptureTarget;
+	private long keyCaptureSuppressionUntilNanos = 0L;
+	protected static final long KEY_CAPTURE_SUPPRESSION_NANOS = 20_000_000L; // ~20 мс
+	
 	// Жест выделения перетаскиванием (живёт на диспетчерском потоке)
 	private IUIElement selectingElement;
 	
@@ -101,31 +114,84 @@ public class DefaultSceneController implements ISceneController {
 		this.inHUDMode = false;
 	}
 	
+	/**
+	 * Распределение нажатия клавиши по приоритетам:
+	 * <ol>
+	 *  <li>E7-реестр получает edge независимо от всего остального — это сквозной механизм;</li>
+	 *  <li>E6-захват в вооружённом состоянии ПОГЛОЩАЕТ событие целиком: ESC коммитит
+	 *      UNBOUND_CODE (отмена), любая другая известная клавиша — свой код, UNKNOWN
+	 *      гасится без развооружения. Ничьему другому обработчику это событие не видо;
+	 *      в частности, ESC здесь НЕ снимает UI-фокус, пока захват активен.</li>
+	 *  <li>В дебаунс-окне после только что завершившегося захвата (~20 мс) клавиатурные
+	 *      сцены шорткаты (Tab/активация/ESC-clear/доставка фокусу и hold-движение камеры)
+	 *      подавлены, чтобы само коммитящее событие их не запустило. Символьный ввод
+	 *      (CharacterInputEvent) при этом проходит всегда — он не является шорткатом.</li>
+	 *  <li>Иначе — историческое поведение без изменений.</li>
+	 * </ol>
+	 */
 	@Override
 	@EventTarget(noParamEvents = KeyboardClickEvent.class)
 	public void onKeyboardClienEvent(final KeyboardClickEvent event) {
 
         final EnumKeyboardButtons key = event.getButton();
-        boolean ctrl  = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_CONTROL, EnumKeyboardButtons.KEY_RIGHT_CONTROL);
-        boolean shift = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_SHIFT, EnumKeyboardButtons.KEY_RIGHT_SHIFT);
 
-        // ESC снимает фокус с элемента ввода
-        if (key == EnumKeyboardButtons.KEY_ESCAPE) {
-            clearFocus();
-        } else if (key == EnumKeyboardButtons.KEY_TAB && !ctrl && this.scene != null) {
-            // Tab / Shift+Tab циклично ходят по фокусируемым элементам сцены;
-            // Ctrl+TAB не перехватывается и уходит обработчику как обычная клавиша.
-            cycleTabFocus(shift);
-        } else if (!ctrl && isActivationKey(key)) {
-            // Enter/NumpadEnter/Space активируют элемент в фокусе (IActivatable).
-            activateFocusedIfPossible();
+        // E7: edge уходит реестру из того же потока событий, без параллельного канала.
+        if (actionRegistry != null) {
+            actionRegistry.noteKeyPressed(ActionBinding.keyCodeFor(key));
         }
 
-        // Клавиша уходит элементу в фокусе (текстовое поле и т.п.)
-        if (focusedElement instanceof IKeyboardHandler handler) {
-            handler.onKeyPressed(key, ctrl, shift);
+        // E6: вооружённая цель забирает нажатие целиком.
+        IKeyCaptureTarget armedTarget = this.keyCaptureTarget;
+        if (armedTarget != null) {
+            handleArmedKeyPress(armedTarget, key);
+            return;
+        }
+
+        if (!isInKeyCaptureSuppression(nowNanos())) {
+            boolean ctrl  = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_CONTROL, EnumKeyboardButtons.KEY_RIGHT_CONTROL);
+            boolean shift = isModifierHeld(EnumKeyboardButtons.KEY_LEFT_SHIFT, EnumKeyboardButtons.KEY_RIGHT_SHIFT);
+
+            // ESC снимает фокус с элемента ввода
+            if (key == EnumKeyboardButtons.KEY_ESCAPE) {
+                clearFocus();
+            } else if (key == EnumKeyboardButtons.KEY_TAB && !ctrl && this.scene != null) {
+                // Tab / Shift+Tab циклично ходят по фокусируемым элементам сцены;
+                // Ctrl+TAB не перехватывается и уходит обработчику как обычная клавиша.
+                cycleTabFocus(shift);
+            } else if (!ctrl && isActivationKey(key)) {
+                // Enter/NumpadEnter/Space активируют элемент в фокусе (IActivatable).
+                activateFocusedIfPossible();
+            }
+
+            // Клавиша уходит элементу в фокусе (текстовое поле и т.п.)
+            if (focusedElement instanceof IKeyboardHandler handler) {
+                handler.onKeyPressed(key, ctrl, shift);
+            }
         }
     }
+
+	/**
+	 * Нажатие при вооружённом захвате: UNKNOWN гасится без развооружения (такой код нельзя
+	 * ни привязать, ни показать), ESC коммитит UNBOUND_CODE как отмену, остальное — свой код.
+	 */
+	private void handleArmedKeyPress(IKeyCaptureTarget target, EnumKeyboardButtons key) {
+		if (key == EnumKeyboardButtons.KEY_UNKNOWN) {
+			return;
+		}
+		int committedCode = (key == EnumKeyboardButtons.KEY_ESCAPE) ? ActionBinding.UNBOUND_CODE : ActionBinding.keyCodeFor(key);
+		this.keyCaptureTarget = null;
+		stampKeyCaptureSuppression();
+		target.onKeyCommitted(committedCode);
+	}
+
+	/** Штамп дебаунс-окна после завершения захвата (коммит/отмена явная или по клавише). */
+	private void stampKeyCaptureSuppression() {
+		keyCaptureSuppressionUntilNanos = nowNanos() + KEY_CAPTURE_SUPPRESSION_NANOS;
+	}
+
+	private boolean isInKeyCaptureSuppression(long nowNanosValue) {
+		return nowNanosValue < keyCaptureSuppressionUntilNanos;
+	}
 
 	/** Клавиши «нажать» для активации сфокусированного элемента. */
 	private static boolean isActivationKey(EnumKeyboardButtons key) {
@@ -229,12 +295,25 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = KeyboardReleaseEvent.class)
 	public void onKeyboardReleaseEvent(final KeyboardReleaseEvent event) {
-        // Edge-событие «отпущена».
+        // Edge-событие «отпущена» — E7-реестр тоже получает его из того же потока.
+        if (actionRegistry != null) {
+            actionRegistry.noteKeyReleased(ActionBinding.keyCodeFor(event.getButton()));
+        }
     }
 	
 	@Override
 	@EventTarget(noParamEvents = KeyboardHoldEvent.class)
 	public void onKeyboardHoldEvent(final KeyboardHoldEvent event) {
+
+		// E7: полный снимок зажатых клавиш актуализирует getIsKeyPressed() реестра
+		// независимо от UI-фокуса (до раннего return ниже).
+		if (actionRegistry != null) {
+			Set<Integer> heldCodes = new HashSet<>(event.getHeldKeys().size());
+			for (EnumKeyboardButtons key : event.getHeldKeys()) {
+				heldCodes.add(ActionBinding.keyCodeFor(key));
+			}
+			actionRegistry.refreshHeldState(heldCodes);
+		}
 
 		// Пока элемент ввода в фокусе, клавиатура «его»: тикаем его (мигание caret)
 		// и не двигаем камерой, чтобы набор текста не управлял миром.
@@ -242,6 +321,11 @@ public class DefaultSceneController implements ISceneController {
 			if (focusedElement instanceof IFrameTickable tickable) {
 				tickable.onFrame();
 			}
+			return;
+		}
+
+		// Дебаунс после завершения захвата (E6): hold-управление подавлено вместе с кликами.
+		if (isInKeyCaptureSuppression(nowNanos())) {
 			return;
 		}
 
@@ -322,6 +406,7 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = MouseButtonPressEvent.class)
 	public void onMouseButtonPressEvent(final MouseButtonPressEvent event) {
+		noteActionButtonEdge(event.getButton(), true);
 		if (event.getButton() != EnumMouseButtons.MOUSE_BUTTON_1) {
 			return;
 		}
@@ -341,6 +426,7 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = MouseButtonReleaseEvent.class)
 	public void onMouseButtonReleaseEvent(final MouseButtonReleaseEvent event) {
+		noteActionButtonEdge(event.getButton(), false);
 		if (event.getButton() == EnumMouseButtons.MOUSE_BUTTON_1 && selectingElement != null) {
 			((ITextSelectionHandler) selectingElement).onSelectionEnd(event.getxPos(), event.getyPos());
 			selectingElement = null;
@@ -361,6 +447,19 @@ public class DefaultSceneController implements ISceneController {
 		}
 	}
 	
+	/** Edge кнопки мыши для E7-реестра с отрицательными кодами (-100-index). */
+	private void noteActionButtonEdge(EnumMouseButtons button, boolean pressed) {
+		if (actionRegistry == null || button.keyID < 0) { // UNKOWN имеет keyID -1
+			return;
+		}
+		int code = ActionBinding.keyCodeForMouseButton(button.keyID);
+		if (pressed) {
+			actionRegistry.noteKeyPressed(code);
+		} else {
+			actionRegistry.noteKeyReleased(code);
+		}
+	}
+
 	@Override
 	@EventTarget(noParamEvents = MouseHoldEvent.class)
 	public void onMouseHoldEvent(final MouseHoldEvent event) {
@@ -368,6 +467,17 @@ public class DefaultSceneController implements ISceneController {
 		tickTooltip();
 		hudMouseButtonHeld = event.getHeldButtons().contains(EnumMouseButtons.MOUSE_BUTTON_2);
 		leftButtonHeld = event.getHeldButtons().contains(EnumMouseButtons.MOUSE_BUTTON_1);
+
+		// E7: снимок зажатых кнопок мыши — отдельный домен от клавиатурного.
+		if (actionRegistry != null) {
+			Set<Integer> heldCodes = new HashSet<>();
+			for (EnumMouseButtons btn : event.getHeldButtons()) {
+				if (btn.keyID >= 0) {
+					heldCodes.add(ActionBinding.keyCodeForMouseButton(btn.keyID));
+				}
+			}
+			actionRegistry.refreshMouseButtonsHeld(heldCodes);
+		}
 	}
 	
 	@Override
@@ -523,6 +633,64 @@ public class DefaultSceneController implements ISceneController {
 
 	public IUIElement getFocusedElement() {
 		return focusedElement;
+	}
+
+    // --- Ремаппабельные действия (E7) и модальный захват (E6) ---------------------
+
+	/**
+	 * Подключает реестр действий к клавиатурному маршрутированию этого контроллера:
+	 * edge'и нажатий/отпусканий, снимки удержания клавиатуры и мыши подаются в него из
+	 * тех же событий, что расходятся по UI. {@code null} отключает хук. Содержимое
+	 * таблицы привязок — за приложением; движок не знает ни одного предопределённого действия.
+	 */
+	public void setActionRegistry(ActionRegistry registry) {
+		this.actionRegistry = registry;
+	}
+
+	public ActionRegistry getActionRegistry() {
+		return actionRegistry;
+	}
+
+	/**
+	 * Вооружает захват следующей клавиши для {@code target}: следующее известное нажатие
+	 * коммитит свой код в колбэк ровно один раз, ESC коммитит UNBOUND_CODE как отмену,
+	 * UNKNOWN гасится без развооружения. Пока цель вооружена, сцены обработчики
+	 * (включая снятие фокуса ESC'ем и доставку элементу в фокусе) событие не видят;
+	 * после завершения коммита действует дебаунс ~20 мс против глобальных шорткатов.
+	 * При вооружении вызывается unPressAllKeys() у подключённого реестра. Повторный вызов
+	 * ПОДМЕНЯЕТ цель без каких-либо коммитов прежней. {@code null} эквивалентен cancelKeyCapture().
+	 */
+	public void armKeyCapture(IKeyCaptureTarget target) {
+		if (target == null) {
+			cancelKeyCapture();
+			return;
+		}
+		this.keyCaptureTarget = target;
+		if (actionRegistry != null) {
+			actionRegistry.unPressAllKeys();
+		}
+	}
+
+	/** Развооружает без какого-либо коммита и штампует дебаунс-окно. */
+	public void cancelKeyCapture() {
+		if (this.keyCaptureTarget == null) {
+			return;
+		}
+		this.keyCaptureTarget = null;
+		stampKeyCaptureSuppression();
+	}
+
+	public boolean isKeyCaptureArmed() {
+		return keyCaptureTarget != null;
+	}
+
+	public IKeyCaptureTarget getKeyCaptureTarget() {
+		return keyCaptureTarget;
+	}
+
+	/** Назначен ли код какому-то зарегистрированному действию — для подсветки дублей в UI. */
+	public boolean isKeyCodeTaken(int keyCode) {
+		return actionRegistry != null && actionRegistry.isKeyCodeTaken(keyCode);
 	}
 
 	@Override

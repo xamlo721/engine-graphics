@@ -4,9 +4,12 @@ import com.xamlo.core.engine.graphics.api.gui.elements.IImageView;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 
 /**
- * Отображение текстуры в пределах геометрии элемента. Рендеринг идёт по стандартному
- * каналу фона (IBackgroundSupport), поэтому режим FILL работает сразу; FIT/CENTER
- * будут поддерживаться после доработки UV в шейдере GUI-элементов.
+ * Отображение текстуры в пределах геометрии элемента. Все режимы растяжения из
+ * {@link EnumImageStretch} учитываются при рендеринге (FILL — исторический путь
+ * unit-mesh'а, остальные — CPU-side набор квадов с собственными UV); nine-patch
+ * настраивается бордами через setNinePatchInsets. Состояние режима синхронизировано
+ * со storage уровня виджета ({@code setBackgroundStretchMode}), который читает
+ * UIElementRenderer для любого текстурированного фона.
  */
 public class ImageView extends Widget implements IImageView {
 
@@ -31,14 +34,34 @@ public class ImageView extends Widget implements IImageView {
         return this.image != null ? this.image : getBackgroundImage();
     }
 
+    /** Режим растяжения изображения и состояния фона виджета (общий источник истины). */
     @Override
     public void setStretchMode(EnumImageStretch mode) {
         this.stretchMode = mode == null ? EnumImageStretch.FILL : mode;
+        super.setBackgroundStretchMode(this.stretchMode);
     }
 
     @Override
     public EnumImageStretch getStretchMode() {
         return this.stretchMode;
+    }
+
+    /** Виджетный уровень задаёт режим напрямую — локальное зеркало остаётся в синхроне. */
+    @Override
+    public void setBackgroundStretchMode(EnumImageStretch mode) {
+        super.setBackgroundStretchMode(mode);
+        this.stretchMode = (mode == null) ? EnumImageStretch.FILL : mode;
+    }
+
+    @Override
+    public EnumImageStretch getBackgroundStretchMode() {
+        return getStretchMode();
+    }
+
+    /** Борды nine-patch для режима NINEPATCH (см. {@link ImageStretchLayout}). */
+    @Override
+    public void setNinePatchInsets(int left, int top, int right, int bottom) {
+        super.setNinePatchInsets(left, top, right, bottom);
     }
 
 }

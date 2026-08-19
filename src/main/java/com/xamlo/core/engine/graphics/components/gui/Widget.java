@@ -15,8 +15,9 @@ import com.xamlo.core.engine.graphics.api.gui.ITooltipSupport;
 import com.xamlo.core.engine.graphics.api.gui.IBorderSupport;
 import com.xamlo.core.engine.graphics.api.gui.IPointer;
 import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
+import com.xamlo.core.engine.graphics.api.gui.IStretchedBackground;
 
-public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, ITooltipSupport {
+public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, ITooltipSupport, IStretchedBackground {
 
 	private boolean dropActive;
 	private IColor savedDropBackground;
@@ -29,6 +30,8 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, I
 	protected boolean focusable;
 	protected boolean focused;
 	protected AbstractTexture backgroundImage;
+	protected EnumImageStretch backgroundStretchMode;
+	protected ImageStretchLayout.NinePatchInsets ninePatchInsets;
 	protected IColor backgroundColor;
 	protected IFont font;
 	protected String toolTipText;
@@ -55,7 +58,9 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, I
 		// Рамка по умолчанию не рисуется: элемент получает её явным вызовом setBorder*/setCornerRadius.
 		this.border = new Border(0, new Color(128, 128, 128));
 		this.zIndex = 0;
-		
+		this.backgroundStretchMode = EnumImageStretch.FILL;
+		this.ninePatchInsets = ImageStretchLayout.NinePatchInsets.NONE;
+
 	}
 	
 	public Widget(IWidget parent) {
@@ -188,6 +193,14 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, I
 		return this.backgroundImage != null;
 	}
 	
+	/** Устанавливает фоновое изображение и его режим растяжения; null-режим текущий не меняет. */
+	public void setBackgroundImage(AbstractTexture image, EnumImageStretch mode) {
+		setBackgroundImage(image);
+		if (mode != null) {
+			setBackgroundStretchMode(mode);
+		}
+	}
+
 	@Override
 	public void setBackgroundImage(AbstractTexture image) {
 		this.backgroundImage = image;
@@ -196,6 +209,26 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, I
 	@Override
 	public AbstractTexture getBackgroundImage() {
 		return this.backgroundImage;
+	}
+
+	@Override
+	public void setBackgroundStretchMode(EnumImageStretch mode) {
+		this.backgroundStretchMode = (mode == null) ? EnumImageStretch.FILL : mode;
+	}
+
+	@Override
+	public EnumImageStretch getBackgroundStretchMode() {
+		return backgroundStretchMode;
+	}
+
+	@Override
+	public void setNinePatchInsets(int left, int top, int right, int bottom) {
+		this.ninePatchInsets = new ImageStretchLayout.NinePatchInsets(left, top, right, bottom).normalized();
+	}
+
+	@Override
+	public ImageStretchLayout.NinePatchInsets getNinePatchInsets() {
+		return ninePatchInsets;
 	}
 
 	@Override
