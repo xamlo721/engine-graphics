@@ -40,6 +40,7 @@ import com.xamlo.core.engine.graphics.font.UnicodeGlyphFont;
 import com.xamlo.core.engine.graphics.fontsystem.FontSystem;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
+import com.xamlo.core.engine.graphics.viewport.ViewportSettings;
 
 public class TextElementRenderer {
 
@@ -187,10 +188,11 @@ public class TextElementRenderer {
  	    this.textShader = debugUIElement.getShader();
 	
 	    UIElementGeometry geometry = ((IResizable)element).getGeometry();
-		
-	    final float screenWidth = 1920.0f;
-	    final float screenHeight = 1080.0f;
-	
+
+	    // E9: логическое пространство отрисовки — заданная сетка или legacy-константы при выключенном вьюпорте.
+	    final float screenWidth = ViewportSettings.effectiveLogicalWidth();
+	    final float screenHeight = ViewportSettings.effectiveLogicalHeight();
+
 	    // Активируем шейдер текста
 	    textShader.bind();
 		ClipBinder.apply(textShader, element);
@@ -289,8 +291,9 @@ public class TextElementRenderer {
 
 	    UIElementGeometry geometry = ((IResizable)element).getGeometry();
 
-	    final float screenWidth = 1920.0f;
-	    final float screenHeight = 1080.0f;
+	    // E9: логическое пространство отрисовки — заданная сетка или legacy-константы при выключенном вьюпорте.
+	    final float screenWidth = ViewportSettings.effectiveLogicalWidth();
+	    final float screenHeight = ViewportSettings.effectiveLogicalHeight();
 
 	    textShader.bind();
 		ClipBinder.apply(textShader, element);
@@ -398,27 +401,18 @@ public class TextElementRenderer {
 	        return 0f;
 	    }
 
- 		GraphicalMesh mesh = glyphSet.atlas.getGlyphMesh(character);
-		
+  		GraphicalMesh mesh = glyphSet.atlas.getGlyphMesh(character);
+
 	    final float left = 0;
 	    final float right =  screenWidth;
-	    
+
 	    final float bottom = screenHeight;
 	    final float top =  0.0f;
-	    
-	    final float near = 0.2f;
-	    final float far = 1000.0f;
-	    
-	    float Tx = xCoord;
-	    float Ty = yCoord;
-	    float Tz = -1.0f;
-	
-		mvpMatrix.zero()
-				.setOrtho(left, right, bottom, top, near, far)
-				.translate(Tx, Ty, Tz)
-		.scale(characterData.getWidth(), -characterData.getHeight(), 1.0f);
-	
-    textShader.setUniform("mvp", mvpMatrix);
+
+		UiSpaceMatrices.quadMatrix(mvpMatrix, left, right, bottom, top, xCoord, yCoord,
+				characterData.getWidth(), characterData.getHeight());
+
+     textShader.setUniform("mvp", mvpMatrix);
 		
 	    mesh.bind();
 	

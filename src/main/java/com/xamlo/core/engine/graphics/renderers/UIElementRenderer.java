@@ -32,6 +32,7 @@ import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
+import com.xamlo.core.engine.graphics.viewport.ViewportSettings;
 
 public class UIElementRenderer {
 
@@ -75,29 +76,27 @@ public class UIElementRenderer {
 
 	    UIElementGeometry geometry = ((IResizable)element).getGeometry();
 		
-	    final float screenWidth = 1920.0f;
-	    final float screenHeight = 1080.0f;
-		
+	    // E9: логическое пространство отрисовки — заданная сетка или legacy-константы при выключенном вьюпорте.
+	    final float screenWidth = ViewportSettings.effectiveLogicalWidth();
+	    final float screenHeight = ViewportSettings.effectiveLogicalHeight();
+
 	    final float left = 0;
 	    final float right =  screenWidth;
-	    
+
 	    final float bottom = screenHeight;
 	    final float top =  0.0f;
-	    
+
 	    final float near = 0.2f;
 	    final float far = 1000.0f;
-	    
+
 	    float Tx = element.getAbsX() + geometry.getWidth()/2;
 	    float Ty = element.getAbsY() + geometry.getHeight()/2;
-	    float Tz = -1.0f; // вместо 0.0f
 
 		debugUIElement.getShader().bind();
 		ClipBinder.apply(debugUIElement.getShader(), element);
 
-		mvpMatrix.zero()
-				.setOrtho(left, right, bottom, top, near, far)
-				.translate(Tx, Ty, Tz)
-				.scale(geometry.getWidth(), -geometry.getHeight(), 1.0f);
+		UiSpaceMatrices.quadMatrix(mvpMatrix, left, right, bottom, top, Tx, Ty,
+				geometry.getWidth(), geometry.getHeight());
 
 	    debugUIElement.getShader().setUniform("mvp", mvpMatrix);
 	    
@@ -189,10 +188,7 @@ public class UIElementRenderer {
                 float cx = element.getAbsX() + fillW / 2f;
                 float cy = element.getAbsY() + fillH / 2f;
 
-                mvpMatrix.zero()
-                        .setOrtho(left, right, bottom, top, near, far)
-                        .translate(cx, cy, Tz)
-                        .scale(fillW, -fillH, 1.0f);
+                UiSpaceMatrices.quadMatrix(mvpMatrix, left, right, bottom, top, cx, cy, fillW, fillH);
 
                 debugUIElement.getShader().bind();
                 debugUIElement.getShader().setUniform("mvp", mvpMatrix);
@@ -231,29 +227,26 @@ public class UIElementRenderer {
 
 	/**
 	 * Каждая полоса рамки рисуется тем же единичным мешом, что фон и fill-индикатор:
-	 * ортопрожекция 1920×1080 + сдвиг в центр полосы + масштаб на её размеры.
+	 * ортопрожекция логического пространства отрисовки + сдвиг в центр полосы + масштаб на её размеры.
 	 */
 	private void drawFrameStrips(List<FrameRects.Strip> strips, Vector4f color) {
         if (strips.isEmpty()) {
             return;
         }
 
+        // E9: границы берутся из активного вьюпорта (по умолчанию — legacy-константы).
         final float left = 0;
-        final float right = 1920.0f;
-        final float bottom = 1080.0f;
+        final float right = ViewportSettings.effectiveLogicalWidth();
+        final float bottom = ViewportSettings.effectiveLogicalHeight();
         final float top = 0.0f;
-        final float near = 0.2f;
-        final float far = 1000.0f;
-        final float Tz = -1.0f;
 
         debugUIElement.getShader().setUniform("useTexture", false);
         debugUIElement.getShader().setUniform("backgroundColor", color);
 
         for (FrameRects.Strip strip : strips) {
-            mvpMatrix.zero()
-                    .setOrtho(left, right, bottom, top, near, far)
-                    .translate(strip.x() + strip.width() / 2f, strip.y() + strip.height() / 2f, Tz)
-                    .scale(strip.width(), -strip.height(), 1.0f);
+            UiSpaceMatrices.quadMatrix(mvpMatrix, left, right, bottom, top,
+                    strip.x() + strip.width() / 2f, strip.y() + strip.height() / 2f,
+                    strip.width(), strip.height());
             debugUIElement.getShader().setUniform("mvp", mvpMatrix);
             glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
         }

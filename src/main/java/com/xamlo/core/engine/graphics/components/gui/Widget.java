@@ -10,17 +10,26 @@ import com.xamlo.core.engine.graphics.api.gui.font.IFont;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.font.ApplicationFont;
 
+import com.xamlo.core.engine.graphics.api.gui.IDraggable;
+import com.xamlo.core.engine.graphics.api.gui.IDragListener;
 import com.xamlo.core.engine.graphics.api.gui.IDropTarget;
 import com.xamlo.core.engine.graphics.api.gui.ITooltipSupport;
 import com.xamlo.core.engine.graphics.api.gui.IBorderSupport;
 import com.xamlo.core.engine.graphics.api.gui.IPointer;
 import com.xamlo.core.engine.graphics.api.gui.IPointerListener;
+import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IStretchedBackground;
+import com.xamlo.core.engine.graphics.api.gui.elements.ILabel;
 
-public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, ITooltipSupport, IStretchedBackground {
+/**
+ * Базовый виджет каталога. Реализует {@link IDraggable}: слушатель по умолчанию null,
+ * то есть жест перетаскивания не активен до явной установки (исторический контракт).
+ */
+public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport, IPointer, ITooltipSupport, IStretchedBackground {
 
 	private boolean dropActive;
 	private IColor savedDropBackground;
+	protected IDragListener dragListener;
 	
 	protected UIElementGeometry geometry;
 	protected IUIElement parent;
@@ -295,6 +304,66 @@ public class Widget implements IWidget, IDropTarget, IBorderSupport, IPointer, I
 	@Override
 	public IPointerListener getPointerListener() {
 		return this.pointerListener;
+	}
+
+	@Override
+	public void setDragListener(IDragListener listener) {
+		this.dragListener = listener;
+	}
+
+	@Override
+	public IDragListener getDragListener() {
+		return this.dragListener;
+	}
+
+	/**
+	 * Визуальный снимок элемента для ghost-preview жеста перетаскивания (E4):
+	 * «shallow»-копия, неотличимая по виду от оригинала в момент старта. Копируются
+	 * только публичные визуальные настройки — размер, цвет/картинка фона с режимом
+	 * растяжения и nine-patch бордами, рамка со скруглением, выравнивание/отступы и
+	 * (если элемент текстовый) текст/цвет шрифта/шрифт. НЕ копируются: дочерние
+	 * элементы (внутренние индикаторы бегунков не дублируются), все слушатели
+	 * (клик/drag/указатель/клавиатура), состояние фокуса и включённости, подсветка
+	 * drop-target'а, tooltip-текст и drag-состояние самого источника. Снимок никогда
+	 * не становится целью hit-test'а ({@link #containsPoint(float, float)} всегда false).
+	 */
+	@Override
+	public IUIElement createDragGhost() {
+		DragSnapshot ghost = new DragSnapshot();
+
+		UIElementGeometry size = this.getGeometry();
+		ghost.resize(new UIElementGeometry(0, 0, size.getWidth(), size.getHeight()));
+		ghost.setBackgroundColor(this.getBackgroundColor());
+		if (this.hasBackgroundImage()) {
+			ghost.setBackgroundImage(this.getBackgroundImage());
+			ghost.setBackgroundStretchMode(this.getBackgroundStretchMode());
+			ImageStretchLayout.NinePatchInsets insets = this.getNinePatchInsets();
+			ghost.setNinePatchInsets(insets.left(), insets.top(), insets.right(), insets.bottom());
+		}
+		ghost.setBorder(this.getBorder());
+		ghost.setCornerRadius(this.getCornerRadius());
+		ghost.setAlignment(this.getAlignment());
+		ghost.setPadding(this.getPadding());
+		ghost.setMargin(this.getMargin());
+		if (this instanceof ILabel label) {
+			ghost.setText(label.getText());
+			ghost.setTextColor(label.getTextColor());
+			ghost.setFont(label.getFont());
+		}
+		// Снимок — чистая декорация: невидим для hit-test'а и клавиатуры.
+		ghost.setVisible(true);
+		ghost.setFocusable(false);
+		return ghost;
+	}
+
+	/** Ghost-preview снимок: рисуется как обычный элемент, но никогда не цель hit-test'а. */
+	private static final class DragSnapshot extends Label {
+
+		@Override
+		public boolean containsPoint(float xCoord, float yCoord) {
+			return false;
+		}
+
 	}
 
 	@Override

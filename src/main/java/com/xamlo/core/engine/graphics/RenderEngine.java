@@ -49,6 +49,7 @@ import com.xamlo.engine.device.events.MouseDragAndropEvent;
 import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
 import com.xamlo.engine.device.events.MouseScrollEvent;
+import com.xamlo.engine.device.events.WindowResizeEvent;
 
 import net.lenni0451.asmevents.EventManager;
 
@@ -205,6 +206,7 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.unregister(MouseHoldEvent.class, sceneController);
 		EventManager.unregister(MouseHoverEvent.class, sceneController);
 		EventManager.unregister(MouseDragAndropEvent.class, sceneController);
+		EventManager.unregister(WindowResizeEvent.class, sceneController);
 	}
 	@Override
 	public void loadScene() {
@@ -293,6 +295,7 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.register(MouseHoldEvent.class, sceneController);
 		EventManager.register(MouseHoverEvent.class, sceneController);
 		EventManager.register(MouseDragAndropEvent.class, sceneController);
+		EventManager.register(WindowResizeEvent.class, sceneController);
 
 		// Клипборд: GLFW-вызовы выполняются на этом (рендер) потоке через очередь задач.
 		Clipboard.init(renderTaskQueue);

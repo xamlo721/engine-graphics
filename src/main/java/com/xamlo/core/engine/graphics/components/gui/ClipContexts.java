@@ -6,6 +6,7 @@ import com.xamlo.core.engine.graphics.api.gui.IClippingElement;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.elements.ILabel;
+import com.xamlo.core.engine.graphics.viewport.ViewportSettings;
 
 /**
  * Чистая геометрия скисора UI: эффективный клип-прямоугольник элемента и его
@@ -14,7 +15,7 @@ import com.xamlo.core.engine.graphics.api.gui.elements.ILabel;
  */
 public final class ClipContexts {
 
-    /** Логический размер окна, зашитый в ортографические матрицы рендереров UI. */
+    /** Legacy логический размер окна: действует, пока приложение не задало свой {@link ViewportSettings}. */
     public static final int WINDOW_WIDTH = 1920;
     public static final int WINDOW_HEIGHT = 1080;
 
@@ -26,12 +27,13 @@ public final class ClipContexts {
      * логических координатах окна: пересечение границ всех предков с
      * {@link IClippingElement#clipsChildren()} и рамками самого окна.
      * Null, если ни один предок не обрезает (клиповать нечего).
+     * E9: внешняя рамка — активное логическое пространство (по умолчанию legacy-константы).
      */
     public static int[] effectiveClippedRect(IUIElement element) {
         int x0 = 0;
         int y0 = 0;
-        int x1 = WINDOW_WIDTH;
-        int y1 = WINDOW_HEIGHT;
+        int x1 = ViewportSettings.effectiveLogicalWidth();
+        int y1 = ViewportSettings.effectiveLogicalHeight();
         boolean anyClipper = false;
 
         for (IUIElement anc = parentOf(element); anc != null && !isDegenerate(x0, y0, x1, y1); anc = parentOf(anc)) {
@@ -78,10 +80,13 @@ public final class ClipContexts {
      * экранных координат направлена вниз и мапится на ndc.y = 1 − 2·sy/H.
      */
     public static Vector4f rectToNdc(int[] rect) {
-        float nx = 2f * rect[0] / WINDOW_WIDTH - 1f;
-        float ny = 1f - 2f * (rect[1] + rect[3]) / WINDOW_HEIGHT;
-        float nw = 2f * rect[2] / WINDOW_WIDTH;
-        float nh = 2f * rect[3] / WINDOW_HEIGHT;
+        // E9: нормализация в активном логическом пространстве (по умолчанию — legacy-константы).
+        int viewW = ViewportSettings.effectiveLogicalWidth();
+        int viewH = ViewportSettings.effectiveLogicalHeight();
+        float nx = 2f * rect[0] / viewW - 1f;
+        float ny = 1f - 2f * (rect[1] + rect[3]) / viewH;
+        float nw = 2f * rect[2] / viewW;
+        float nh = 2f * rect[3] / viewH;
         return new Vector4f(nx, ny, nw, nh);
     }
 

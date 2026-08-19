@@ -99,9 +99,12 @@ public class LJWGLWindow extends AbstractWindow {
 	
 	@Override
 	public void resize(int width, int height){
+		// E9: поля и событие обновляются только при реально изменившемся размере —
+		// повторный вызов с тем же размером GLFW не дёргает и события не шлёт.
+		if (!super.applyNewSize(width, height)) {
+			return;
+		}
 		glfwSetWindowSize(window, width, height);
-		this.width = width;
-		this.height = height;
 	}
 
 	@Override

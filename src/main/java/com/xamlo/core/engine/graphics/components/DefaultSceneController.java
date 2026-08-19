@@ -12,6 +12,7 @@ import com.xamlo.core.engine.graphics.api.components.ICamera;
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneController;
 import com.xamlo.core.engine.graphics.api.gui.IActivatable;
+import com.xamlo.core.engine.graphics.api.gui.DragPayload;
 import com.xamlo.core.engine.graphics.api.gui.IDragListener;
 import com.xamlo.core.engine.graphics.api.gui.IDraggable;
 import com.xamlo.core.engine.graphics.api.gui.IClickable;
@@ -58,6 +59,10 @@ import com.xamlo.engine.device.events.MouseDragAndropEvent;
 import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
 import com.xamlo.engine.device.events.MouseScrollEvent;
+import com.xamlo.engine.device.events.WindowResizeEvent;
+import com.xamlo.core.engine.graphics.components.gui.ClipContexts;
+import com.xamlo.core.engine.graphics.viewport.LogicalViewport;
+import com.xamlo.core.engine.graphics.viewport.ViewportSettings;
 
 import net.lenni0451.asmevents.event.EventTarget;
 
@@ -79,6 +84,14 @@ public class DefaultSceneController implements ISceneController {
 	// Состояние активного жеста drag-and-drop (живёт только на диспетчерском потоке)
 	private IDraggable draggingElement;
 	private IDropTarget dragTarget;
+	
+	// «Призрак» перетаскиваемого элемента (E4): визуальный снимок за курсором.
+	// Оффсеты — от точки захвата до левого верхнего угла элемента в момент START.
+	private IUIElement dragGhost;
+	private IScene dragGhostScene;
+	
+	private float dragGrabOffsetX;
+	private float dragGrabOffsetY;
 	
 	// Элемент, принимающий клавиатурный ввод (устанавливается по клику / ESC снимает)
 	private IUIElement focusedElement;
@@ -107,7 +120,17 @@ public class DefaultSceneController implements ISceneController {
 	private float lastCursorY;
 	private boolean hasLastCursor = false;
 	protected long tooltipDelayMillis = 600L;
-	
+
+	// --- Логическое пространство GUI и resize окна (E9) -------------------------
+
+	/** Заданная приложением логическая сетка UI; null — legacy-режим с историческими константами. */
+	private volatile LogicalViewport logicalViewport = null;
+
+	// Последний известный физический размер окна из WindowResizeEvent; до первого события —
+	// legacy-значения, совпадающие со стартовым состоянием рендер-проходов.
+	private volatile int lastPhysicalWidth = ClipContexts.WINDOW_WIDTH;
+	private volatile int lastPhysicalHeight = ClipContexts.WINDOW_HEIGHT;
+
 	private static final float movAmt = 0.0011f;
 
 	public DefaultSceneController() {
@@ -522,22 +545,27 @@ public class DefaultSceneController implements ISceneController {
 				IUIElement found = this.scene.findElementAt(event.getxPos(), event.getyPos());
 				if (found instanceof IDraggable && ((IDraggable)found).getDragListener() != null) {
 					this.draggingElement = (IDraggable)found;
+					// E4: точка захвата запоминается ДО колбэка — слушатель может сдвинуть источник.
+					dragGrabOffsetX = event.getxPos() - found.getAbsX();
+					dragGrabOffsetY = event.getyPos() - found.getAbsY();
 					IDragListener listener = draggingElement.getDragListener();
 					listener.onDragStart(draggingElement, event.getxPos(), event.getyPos());
+					attachDragGhost(event.getxPos(), event.getyPos());
 				} else {
 					this.draggingElement = null;
 				}
 				break;
 			}
-			
+
 			case DRAG: {
 				if (draggingElement == null) break;
-				
+
 				IDragListener listener = draggingElement.getDragListener();
-				
-				// Таргет под курсором: сам перетаскиваемый элемент из хит-теста исключаем
+
+				// Таргет под курсором: сам перетаскиваемый элемент из хит-теста исключаем,
+				// а payload жеста таргет проверяет перед принятием (E4).
 				IUIElement underCursor = this.scene.findElementAt(event.getxPos(), event.getyPos(), draggingElement);
-				IDropTarget newTarget = (underCursor instanceof IDropTarget) ? (IDropTarget)underCursor : null;
+				IDropTarget newTarget = acceptedDropCandidate(underCursor);
 				
 				if (newTarget != dragTarget) {
 					if (dragTarget != null) {
@@ -552,33 +580,112 @@ public class DefaultSceneController implements ISceneController {
 				}
 				
 				listener.onDrag(draggingElement, event.getxPos(), event.getyPos(), event.getDeltaX(), event.getDeltaY());
+
+				// E4: снимок следует за курсором с оффсетом точки захвата.
+				repositionDragGhost(event.getxPos(), event.getyPos());
 				break;
 			}
-			
+
 			case END: {
 				if (draggingElement == null) break;
-				
+
 				IDragListener listener = draggingElement.getDragListener();
-				
+
 				if (dragTarget != null) {
 					dragTarget.setDropActive(false);
 					listener.onDrop(draggingElement, dragTarget, event.getxPos(), event.getyPos());
 				} else {
 					IUIElement underCursor = this.scene.findElementAt(event.getxPos(), event.getyPos(), draggingElement);
-					if (underCursor instanceof IDropTarget) {
-						IDropTarget lastSecond = (IDropTarget)underCursor;
+					IDropTarget lastSecond = acceptedDropCandidate(underCursor);
+					if (lastSecond != null) {
 						lastSecond.setDropActive(false);
 						listener.onDrop(draggingElement, lastSecond, event.getxPos(), event.getyPos());
 					} else {
 						listener.onDragEnd(draggingElement, event.getxPos(), event.getyPos());
 					}
 				}
-				
+
 				this.draggingElement = null;
 				this.dragTarget = null;
+				detachDragGhost();
 				break;
 			}
 		}
+	}
+
+	// --- Типизированный payload и «призрак» перетаскивания (E4) ----------------------
+
+	/** Корневой слой ghost-снимка: выше любых реальных элементов сцены, ниже кольца подсказок. */
+	protected static final int DRAG_GHOST_Z_INDEX = Integer.MAX_VALUE / 4;
+
+	/**
+	 * Таргет под курсором, принимающий типизированные данные активного жеста (E4):
+	 * кандидат должен быть IDropTarget И пройти свою проверку {@link IDropTarget#acceptsDrag}
+	 * по payload'у источника. Отклонённый таргет для этого payload'а прозрачен — ни
+	 * подсветки, ни enter/drop-доставки нет, жест завершится как сброс вне цели.
+	 */
+	private IDropTarget acceptedDropCandidate(IUIElement underCursor) {
+		if (!(underCursor instanceof IDropTarget target)) {
+			return null;
+		}
+		DragPayload payload = (draggingElement == null) ? null : draggingElement.getDragPayload();
+		return target.acceptsDrag(payload) ? target : null;
+	}
+
+	/**
+	 * Присоединяет визуальный снимок перетаскиваемого элемента к корню сцены (E4).
+	 * Снимок создаётся только если элемент явно включил ghost-preview
+	 * ({@link IDraggable#isGhostPreviewEnabled()}) и умеет себя клонировать
+	 * ({@link IDraggable#createDragGhost()} не null); позиционируется в точке захвата
+	 * поверх оригинала, дальше следует за курсором в DRAG-кадрах. Повторный вызов
+	 * сначала отсоединяет прежний снимок — в сцене всегда ровно один на активный жест.
+	 */
+	private void attachDragGhost(float xCoord, float yCoord) {
+		detachDragGhost();
+		IDraggable source = this.draggingElement;
+		if (source == null || !source.isGhostPreviewEnabled()) {
+			return;
+		}
+		IUIElement ghost = source.createDragGhost();
+		if (ghost == null || this.scene == null) {
+			return;
+		}
+		this.dragGhostScene = this.scene;
+		this.dragGhost = ghost;
+		repositionDragGhost(xCoord, yCoord);
+		ghost.setZIndex(DRAG_GHOST_Z_INDEX);
+		if (ghost instanceof IVisible visible) {
+			visible.setVisible(true);
+		}
+		List<IUIElement> roots = this.scene.getGuiElements();
+		if (!roots.contains(ghost)) {
+			roots.add(ghost);
+		}
+	}
+
+	/** Снимок встаёт так, как если бы его схватили в точке старта жеста и вели за курсором. */
+	private void repositionDragGhost(float xCoord, float yCoord) {
+		if (this.dragGhost == null) {
+			return;
+		}
+		this.dragGhost.setPosition((int)(xCoord - dragGrabOffsetX), (int)(yCoord - dragGrabOffsetY));
+	}
+
+	/** Убирает снимок из того списка сцены, куда он был добавлен (сцена могла смениться). */
+	private void detachDragGhost() {
+		if (this.dragGhost == null) {
+			return;
+		}
+		if (dragGhostScene != null) {
+			dragGhostScene.getGuiElements().remove(this.dragGhost);
+		}
+		this.dragGhost = null;
+		this.dragGhostScene = null;
+	}
+
+	/** Тестовый хук: текущий ghost-снимок активного жеста (null — жест не идёт/выключен). */
+	public IUIElement getDragGhostForTests() {
+		return this.dragGhost;
 	}
 
 	/**
@@ -634,6 +741,71 @@ public class DefaultSceneController implements ISceneController {
 	public IUIElement getFocusedElement() {
 		return focusedElement;
 	}
+
+	// --- Логическое пространство GUI и resize окна (E9) -------------------------
+
+	/**
+	 * Опционально задаёт логическую сетку UI приложения (opt-in на E9): пока она задана,
+	 * ортоматрицы рендереров и клип-математика работают в её размерах вместо зашитых
+	 * 1920×1080, а {@link #onWindowResizeEvent} дополнительно сообщает о каждом изменении
+	 * физического размера окна через хук {@link #onViewportChanged}. {@code null} возвращает
+	 * legacy-поведение побайтово как до введения вьюпорта. Состояние дублируется в глобальном
+	 * {@link ViewportSettings}, которым читают рендеры и ClipContexts.
+	 */
+	public void setLogicalViewport(LogicalViewport viewport) {
+	    if (viewport != null && viewport.equals(this.logicalViewport)) {
+	        return;
+	    }
+	    this.logicalViewport = viewport;
+	    ViewportSettings.setActive(viewport);
+	    int logicalW = (viewport == null) ? ClipContexts.WINDOW_WIDTH : viewport.getLogicalWidth();
+	    int logicalH = (viewport == null) ? ClipContexts.WINDOW_HEIGHT : viewport.getLogicalHeight();
+	    onViewportChanged(logicalW, logicalH, lastPhysicalWidth, lastPhysicalHeight);
+	}
+
+	/** Активная логическая сетка или null — не задана (legacy-режим). */
+	public LogicalViewport getLogicalViewport() {
+	    return this.logicalViewport;
+	}
+
+	/** Физический X курсора → координата активной сетки; без заданной сетки — identity. */
+	public float toDesignX(float physicalX) {
+	    LogicalViewport vp = this.logicalViewport;
+	    return (vp == null) ? physicalX : vp.toDesignX(physicalX, lastPhysicalWidth);
+	}
+
+	/** Физический Y курсора → координата активной сетки; без заданной сетки — identity. */
+	public float toDesignY(float physicalY) {
+	    LogicalViewport vp = this.logicalViewport;
+	    return (vp == null) ? physicalY : vp.toDesignY(physicalY, lastPhysicalHeight);
+	}
+
+	/**
+	 * Событие изменения размера окна: обновляет последний известный физический размер и при
+	 * заданной сетке зовёт хук re-layout. Пока сетка не задана, обработчик лишь запоминает
+	 * размеры — legacy-поведение рендера от физического размера не зависит.
+	 */
+	@EventTarget(noParamEvents = WindowResizeEvent.class)
+	public void onWindowResizeEvent(final WindowResizeEvent event) {
+	    int w = event.getWidth();
+	    int h = event.getHeight();
+	    if (w == lastPhysicalWidth && h == lastPhysicalHeight) {
+	        return; // повторный вызов с прежним размером — события уже было ровно одно
+	    }
+	    lastPhysicalWidth = w;
+	    lastPhysicalHeight = h;
+	    LogicalViewport vp = this.logicalViewport;
+	    if (vp != null) {
+	        onViewportChanged(vp.getLogicalWidth(), vp.getLogicalHeight(), w, h);
+	    }
+	}
+
+	/**
+	 * Хук перераскладки активного контента: вызывается при установке/сбросе логической сетки
+	 * ({@link #setLogicalViewport}) и на каждое изменение физического размера окна в активном
+	 * режиме. По умолчанию ничего не делает — сцены переопределяют под свой re-layout.
+	 */
+	protected void onViewportChanged(int logicalWidth, int logicalHeight, int physicalWidth, int physicalHeight) {}
 
     // --- Ремаппабельные действия (E7) и модальный захват (E6) ---------------------
 
@@ -714,9 +886,6 @@ public class DefaultSceneController implements ISceneController {
 	}
 
 	// --- Всплывающие подсказки -------------------------------------------------
-
-	private static final int WINDOW_W = 1920;
-	private static final int WINDOW_H = 1080;
 
 	/** Подсказка не перехватывает клики; многострочный текст (\n) рисуется блоком строк. */
 	private static final class TooltipLabel extends Label {
@@ -856,10 +1025,13 @@ public class DefaultSceneController implements ISceneController {
 		int height = (lineCount > 1) ? (int) Math.ceil(lineCount * tooltipLineAdvance()) + 8 : 26;
 		int x = (int) lastCursorX + 14;
 		int y = (int) lastCursorY + 20;
-		if (x + width > WINDOW_W - 8) {
+		// E9: границы окна в активном логическом пространстве (по умолчанию legacy 1920×1080).
+		int viewW = ViewportSettings.effectiveLogicalWidth();
+		int viewH = ViewportSettings.effectiveLogicalHeight();
+		if (x + width > viewW - 8) {
 			x = (int) lastCursorX - width - 14; // у правого края — слева от курсора
 		}
-		if (y + height > WINDOW_H - 8) {
+		if (y + height > viewH - 8) {
 			y = (int) lastCursorY - height - 12; // у нижнего края — над курсором
 		}
 		x = Math.max(8, x);
