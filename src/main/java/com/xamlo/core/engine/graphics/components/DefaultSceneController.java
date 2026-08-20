@@ -370,12 +370,15 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = MouseClickEvent.class)
 	public void onMouseClienEvent(final MouseClickEvent event) {
-		
+		// E9: курсор приходит физическими пикселями — один раз переводим в пространство активной сетки.
+		float ux = this.toDesignX(event.getxPos());
+		float uy = this.toDesignY(event.getyPos());
+
 		switch (event.getButton()) {
 			
 		case MOUSE_BUTTON_1: {
 			
-			IUIElement element = this.scene.findElementAt(event.getxPos(), event.getyPos());
+			IUIElement element = this.scene.findElementAt(ux, uy);
 
 			if (element == null) {
 				clearFocus();
@@ -393,7 +396,7 @@ public class DefaultSceneController implements ISceneController {
 			if (element instanceof IPointer pointer) {
 				IPointerListener listener = pointer.getPointerListener();
 				if (listener != null) {
-					listener.onPointer(element, event.getxPos(), event.getyPos());
+					listener.onPointer(element, ux, uy);
 				}
 			}
 			
@@ -423,45 +426,54 @@ public class DefaultSceneController implements ISceneController {
 				throw new IllegalArgumentException("Unexpected value: " + event.getButton());
 			}
 		}
-		noteCursorPosition(event.getxPos(), event.getyPos());
+		noteCursorPosition(ux, uy);
 	}
 
 	@Override
 	@EventTarget(noParamEvents = MouseButtonPressEvent.class)
 	public void onMouseButtonPressEvent(final MouseButtonPressEvent event) {
+		// E9: курсор приходит физическими пикселями — один раз переводим в пространство активной сетки.
+		float ux = this.toDesignX(event.getxPos());
+		float uy = this.toDesignY(event.getyPos());
 		noteActionButtonEdge(event.getButton(), true);
 		if (event.getButton() != EnumMouseButtons.MOUSE_BUTTON_1) {
 			return;
 		}
 		// Старт выделения: ближайший к курсору элемент, поддерживающий выделение.
-		IUIElement element = this.scene.findElementAt(event.getxPos(), event.getyPos());
+		IUIElement element = this.scene.findElementAt(ux, uy);
 		IUIElement target = nearestTextSelectionHandler(element);
 		this.selectingElement = target;
 		if (target != null) {
 			// Поле, где начинают выделять, получает и клавиатурный фокус
 			// (drag без клика не прогоняет focusNearestFocusable из click-обработчика).
 			focusNearestFocusable(target);
-			((ITextSelectionHandler) target).onSelectionStart(event.getxPos(), event.getyPos());
+			((ITextSelectionHandler) target).onSelectionStart(ux, uy);
 		}
-		noteCursorPosition(event.getxPos(), event.getyPos());
+		noteCursorPosition(ux, uy);
 	}
 
 	@Override
 	@EventTarget(noParamEvents = MouseButtonReleaseEvent.class)
 	public void onMouseButtonReleaseEvent(final MouseButtonReleaseEvent event) {
+		// E9: курсор приходит физическими пикселями — один раз переводим в пространство активной сетки.
+		float ux = this.toDesignX(event.getxPos());
+		float uy = this.toDesignY(event.getyPos());
 		noteActionButtonEdge(event.getButton(), false);
 		if (event.getButton() == EnumMouseButtons.MOUSE_BUTTON_1 && selectingElement != null) {
-			((ITextSelectionHandler) selectingElement).onSelectionEnd(event.getxPos(), event.getyPos());
+			((ITextSelectionHandler) selectingElement).onSelectionEnd(ux, uy);
 			selectingElement = null;
 		}
-		noteCursorPosition(event.getxPos(), event.getyPos());
+		noteCursorPosition(ux, uy);
 	}
 
 	/** Прокрутка колеса: дельта уходит ближайшему предку-таргету под курсором. */
 	@Override
 	@EventTarget(noParamEvents = MouseScrollEvent.class)
 	public void onMouseScrollEvent(final MouseScrollEvent event) {
-		IUIElement element = this.scene.findElementAt(event.getxPos(), event.getyPos());
+		// E9: курсор приходит физическими пикселями — один раз переводим в пространство активной сетки.
+		float ux = this.toDesignX(event.getxPos());
+		float uy = this.toDesignY(event.getyPos());
+		IUIElement element = this.scene.findElementAt(ux, uy);
 		for (IUIElement candidate = element; candidate != null; candidate = candidate.hasParent() ? candidate.getParent() : null) {
 			if (candidate instanceof IWheelTarget target) {
 				target.onScrolled(event.getDeltaX(), event.getDeltaY());
@@ -506,10 +518,13 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = MouseHoverEvent.class)
 	public void onMouseHoverEvent(MouseHoverEvent event) {
+		// E9: курсор приходит физическими пикселями — один раз переводим в пространство активной сетки.
+		float ux = this.toDesignX(event.getXCoord());
+		float uy = this.toDesignY(event.getYCoord());
 
 		// Идёт выделение перетаскиванием — растягиваем его до курсора.
 		if (selectingElement != null && leftButtonHeld) {
-			((ITextSelectionHandler) selectingElement).onSelectionDrag(event.getXCoord(), event.getYCoord());
+			((ITextSelectionHandler) selectingElement).onSelectionDrag(ux, uy);
 			return;
 		}
 
@@ -524,33 +539,36 @@ public class DefaultSceneController implements ISceneController {
 				((IHoverable)otherElement).setHovered(false);
 			}
 		}
-		IUIElement element = this.scene.findElementAt(event.getXCoord(), event.getYCoord());
+		IUIElement element = this.scene.findElementAt(ux, uy);
 
 		if (element != null && element instanceof IHoverable) {
 			IHoverable hoverableElement = (IHoverable)element;
 			hoverableElement.setHovered(true);
 		}
 		
-		updateFromCursor(event.getXCoord(), event.getYCoord());
+		updateFromCursor(ux, uy);
 	}
 
 	@Override
 	@EventTarget(noParamEvents = MouseDragAndropEvent.class)
 	public void onMouseDragAndDropEvent(final MouseDragAndropEvent event) {
-		
+		// E9: курсор приходит физическими пикселями — один раз переводим в пространство активной сетки.
+		float ux = this.toDesignX(event.getxPos());
+		float uy = this.toDesignY(event.getyPos());
+
 		switch (event.getPhase()) {
 			
 			case START: {
 				// Жест стал перетаскиванием — ищем элемент под курсором без исключений
-				IUIElement found = this.scene.findElementAt(event.getxPos(), event.getyPos());
+				IUIElement found = this.scene.findElementAt(ux, uy);
 				if (found instanceof IDraggable && ((IDraggable)found).getDragListener() != null) {
 					this.draggingElement = (IDraggable)found;
 					// E4: точка захвата запоминается ДО колбэка — слушатель может сдвинуть источник.
-					dragGrabOffsetX = event.getxPos() - found.getAbsX();
-					dragGrabOffsetY = event.getyPos() - found.getAbsY();
+					dragGrabOffsetX = ux - found.getAbsX();
+					dragGrabOffsetY = uy - found.getAbsY();
 					IDragListener listener = draggingElement.getDragListener();
-					listener.onDragStart(draggingElement, event.getxPos(), event.getyPos());
-					attachDragGhost(event.getxPos(), event.getyPos());
+					listener.onDragStart(draggingElement, ux, uy);
+					attachDragGhost(ux, uy);
 				} else {
 					this.draggingElement = null;
 				}
@@ -564,7 +582,7 @@ public class DefaultSceneController implements ISceneController {
 
 				// Таргет под курсором: сам перетаскиваемый элемент из хит-теста исключаем,
 				// а payload жеста таргет проверяет перед принятием (E4).
-				IUIElement underCursor = this.scene.findElementAt(event.getxPos(), event.getyPos(), draggingElement);
+				IUIElement underCursor = this.scene.findElementAt(ux, uy, draggingElement);
 				IDropTarget newTarget = acceptedDropCandidate(underCursor);
 				
 				if (newTarget != dragTarget) {
@@ -579,10 +597,10 @@ public class DefaultSceneController implements ISceneController {
 					dragTarget = newTarget;
 				}
 				
-				listener.onDrag(draggingElement, event.getxPos(), event.getyPos(), event.getDeltaX(), event.getDeltaY());
+				listener.onDrag(draggingElement, ux, uy, event.getDeltaX(), event.getDeltaY());
 
 				// E4: снимок следует за курсором с оффсетом точки захвата.
-				repositionDragGhost(event.getxPos(), event.getyPos());
+				repositionDragGhost(ux, uy);
 				break;
 			}
 
@@ -593,15 +611,15 @@ public class DefaultSceneController implements ISceneController {
 
 				if (dragTarget != null) {
 					dragTarget.setDropActive(false);
-					listener.onDrop(draggingElement, dragTarget, event.getxPos(), event.getyPos());
+					listener.onDrop(draggingElement, dragTarget, ux, uy);
 				} else {
-					IUIElement underCursor = this.scene.findElementAt(event.getxPos(), event.getyPos(), draggingElement);
+					IUIElement underCursor = this.scene.findElementAt(ux, uy, draggingElement);
 					IDropTarget lastSecond = acceptedDropCandidate(underCursor);
 					if (lastSecond != null) {
 						lastSecond.setDropActive(false);
-						listener.onDrop(draggingElement, lastSecond, event.getxPos(), event.getyPos());
+						listener.onDrop(draggingElement, lastSecond, ux, uy);
 					} else {
-						listener.onDragEnd(draggingElement, event.getxPos(), event.getyPos());
+						listener.onDragEnd(draggingElement, ux, uy);
 					}
 				}
 

@@ -99,12 +99,23 @@ public class LJWGLWindow extends AbstractWindow {
 	
 	@Override
 	public void resize(int width, int height){
+		// Программный запрос из кода приложения: применить + попросить GLFW о новом размере.
 		// E9: поля и событие обновляются только при реально изменившемся размере —
 		// повторный вызов с тем же размером GLFW не дёргает и события не шлёт.
 		if (!super.applyNewSize(width, height)) {
 			return;
 		}
 		glfwSetWindowSize(window, width, height);
+	}
+
+	/**
+	 * Нативное изменение окна (X/compositor сам переместил/изменил размер): фиксируем только
+		поля и событие. Обратного glfwSetWindowSize нет намеренно: эхо уже применённого размера
+		посреди активного жеста ресайза рассинхронизирует WM/CSD — мигание, «ломанные» рамки,
+		залипающие чёрные области.
+	 */
+	void onNativeResize(int width, int height) {
+	    super.applyNewSize(width, height);
 	}
 
 	@Override

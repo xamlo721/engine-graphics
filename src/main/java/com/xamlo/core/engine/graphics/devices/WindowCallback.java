@@ -6,7 +6,7 @@ public class WindowCallback extends GLFWFramebufferSizeCallback {
 
     @Override
     public void invoke(long window, int width, int height) {
-        LJWGLWindow.getInstance().resize(width, height);
+        LJWGLWindow.getInstance().onNativeResize(width, height);
     }
 
 }
