@@ -7,9 +7,11 @@ import com.xamlo.core.engine.graphics.components.AbstractTexture;
  * Отображение текстуры в пределах геометрии элемента. Все режимы растяжения из
  * {@link EnumImageStretch} учитываются при рендеринге (FILL — исторический путь
  * unit-mesh'а, остальные — CPU-side набор квадов с собственными UV); nine-patch
- * настраивается бордами через setNinePatchInsets. Состояние режима синхронизировано
- * со storage уровня виджета ({@code setBackgroundStretchMode}), который читает
- * UIElementRenderer для любого текстурированного фона.
+ * настраивается бордами через setNinePatchInsets. Подрегион исходной текстуры задаётся
+ * через setRegion: кроп применяется первым (до маппинга режима и борд), а FILL с неполным
+ * регионом рисуется тем же CPU-side путём, что и прочие режимы. Состояние режима
+ * синхронизировано со storage уровня виджета ({@code setBackgroundStretchMode}),
+ * который читает UIElementRenderer для любого текстурированного фона.
  */
 public class ImageView extends Widget implements IImageView {
 
@@ -62,6 +64,17 @@ public class ImageView extends Widget implements IImageView {
     @Override
     public void setNinePatchInsets(int left, int top, int right, int bottom) {
         super.setNinePatchInsets(left, top, right, bottom);
+    }
+
+    /** Подрегион исходной текстуры в пикселях от её левого верхнего угла; хранение — на уровне виджета. */
+    @Override
+    public void setRegion(int uPx, int vPx, int wPx, int hPx) {
+        super.setRegion(uPx, vPx, wPx, hPx);
+    }
+
+    @Override
+    public ImageStretchLayout.TextureRegion getRegion() {
+        return super.getRegion();
     }
 
 }

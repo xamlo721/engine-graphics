@@ -47,6 +47,21 @@ public final class ImageStretchLayout {
         }
     }
 
+    /**
+     * Подрегион исходной текстуры в пикселях от её левого верхнего угла. {@code FULL} — вся
+     * текстура; смещения обрезаются внутрь источника при раскладке, нулевые/отрицательные
+     * размеры означают «до края» по соответствующей оси.
+     */
+    public record TextureRegion(int u, int v, int width, int height) {
+
+        public static final TextureRegion FULL = new TextureRegion(0, 0, 0, 0);
+
+        /** Отрицательные смещения обрезаются до нуля (размеры разрешаются против фактического размера). */
+        public TextureRegion normalized() {
+            return new TextureRegion(Math.max(u, 0), Math.max(v, 0), width, height);
+        }
+    }
+
     private ImageStretchLayout() {
     }
 
@@ -65,6 +80,38 @@ public final class ImageStretchLayout {
             default:
                 return fill(srcWidth, srcHeight, dstWidth, dstHeight);
         }
+    }
+
+    /**
+     * Тот же диспетчер с учётом подрегина источника ({@code region == null}/{@link TextureRegion#FULL} — вся текстура).
+     * Правило композиции: кроп применяется ПЕРВЫМ — до маппинга режима растяжения и до борд nine-patch;
+     * при режиме NINEPATCH борды интерпретируются в пикселях вырезанного фрагмента. Для FILL/FIT/CENTER
+     * подрегион ведёт себя как самостоятельное изображение своих нативных размеров. Координаты {@code s*}
+     * всех выдаваемых фрагментов уже включают смещение от угла всей текстуры, поэтому рендерер нормализует
+     * их против полного размера текстуры без дополнительных правок.
+     */
+    public static List<StretchPiece> layout(EnumImageStretch mode, TextureRegion region, int srcWidth, int srcHeight,
+                                           float dstWidth, float dstHeight, NinePatchInsets insets) {
+        if (!validSize(srcWidth, srcHeight, dstWidth, dstHeight)) {
+            return Collections.emptyList();
+        }
+        TextureRegion r = (region == null) ? TextureRegion.FULL : region.normalized();
+        int u = Math.min(r.u(), srcWidth);
+        int v = Math.min(r.v(), srcHeight);
+        int cropW = (r.width() <= 0) ? srcWidth - u : Math.min(r.width(), srcWidth - u);
+        int cropH = (r.height() <= 0) ? srcHeight - v : Math.min(r.height(), srcHeight - v);
+        if (cropW <= 0 || cropH <= 0) {
+            return Collections.emptyList();
+        }
+        List<StretchPiece> pieces = layout(mode, cropW, cropH, dstWidth, dstHeight, insets);
+        if (u == 0 && v == 0) {
+            return pieces;
+        }
+        List<StretchPiece> shifted = new ArrayList<>(pieces.size());
+        for (StretchPiece p : pieces) {
+            shifted.add(new StretchPiece(p.sx() + u, p.sy() + v, p.sw(), p.sh(), p.dx(), p.dy(), p.dw(), p.dh()));
+        }
+        return shifted;
     }
 
     /** FILL: изображение целиком на всю область элемента (историческое поведение). */

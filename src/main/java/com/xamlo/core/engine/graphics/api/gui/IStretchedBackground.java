@@ -2,6 +2,7 @@ package com.xamlo.core.engine.graphics.api.gui;
 
 import com.xamlo.core.engine.graphics.components.gui.EnumImageStretch;
 import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.NinePatchInsets;
+import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.TextureRegion;
 
 /**
  * Элемент с фоновым изображением, для которого режим растяжения настраивается
@@ -25,6 +26,18 @@ public interface IStretchedBackground extends IBackgroundSupport {
 
     default NinePatchInsets getNinePatchInsets() {
         return NinePatchInsets.NONE;
+    }
+
+    /**
+     * Подрегион исходной текстуры фона в пикселях от её левого верхнего угла ({@link TextureRegion}).
+     * Нулевые/отрицательные значения — вся текстура по соответствующей оси (дефолт {@code FULL});
+     * кроп применяется до маппинга режима растяжения и борд nine-patch (см. ImageStretchLayout.layout).
+     */
+    default void setRegion(int uPx, int vPx, int wPx, int hPx) {
+    }
+
+    default TextureRegion getRegion() {
+        return TextureRegion.FULL;
     }
 
 }

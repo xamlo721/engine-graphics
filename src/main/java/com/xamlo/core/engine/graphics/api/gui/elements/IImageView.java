@@ -2,6 +2,7 @@ package com.xamlo.core.engine.graphics.api.gui.elements;
 
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.components.gui.EnumImageStretch;
+import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.TextureRegion;
 
 /**
  * Интерфейс для элементов, отображающих текстуру внутри собственных границ.
@@ -30,6 +31,22 @@ public interface IImageView extends IWidget {
 
     /** Пиксели бордов nine-patch по сторонам изображения (левый, верхний, правый, нижний). */
     default void setNinePatchInsets(int left, int top, int right, int bottom) {
+    }
+
+    /**
+     * Подрегион исходной текстуры в пикселях от её левого верхнего угла ({@link TextureRegion}).
+     * Нулевые или отрицательные значения означают «вся текстура» по соответствующей оси; дефолт — {@code FULL}.
+     * Правило композиции: кроп применяется ПЕРВЫМ — до маппинга режима растяжения и до борд nine-patch
+     * (борды при режиме NINEPATCH интерпретируются относительно вырезанного фрагмента); для FILL/FIT/CENTER
+     * подрегион ведёт себя как самостоятельное изображение своих размеров. Режим FILL с неполным регионом
+     * рисуется через CPU-side генерацию квадов с собственными UV (как остальные режимы), без изменения
+     * исторического unit-mesh пути и шейдера элемента.
+     */
+    default void setRegion(int uPx, int vPx, int wPx, int hPx) {
+    }
+
+    default TextureRegion getRegion() {
+        return TextureRegion.FULL;
     }
 
 }

@@ -41,6 +41,7 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 	protected AbstractTexture backgroundImage;
 	protected EnumImageStretch backgroundStretchMode;
 	protected ImageStretchLayout.NinePatchInsets ninePatchInsets;
+	protected ImageStretchLayout.TextureRegion imageSourceRegion;
 	protected IColor backgroundColor;
 	protected IFont font;
 	protected String toolTipText;
@@ -69,6 +70,7 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 		this.zIndex = 0;
 		this.backgroundStretchMode = EnumImageStretch.FILL;
 		this.ninePatchInsets = ImageStretchLayout.NinePatchInsets.NONE;
+		this.imageSourceRegion = ImageStretchLayout.TextureRegion.FULL;
 
 	}
 	
@@ -240,6 +242,17 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 		return ninePatchInsets;
 	}
 
+	/** Подрегион исходной текстуры фона в пикселях от её левого верхнего угла (см. {@link IStretchedBackground#setRegion}). */
+	@Override
+	public void setRegion(int uPx, int vPx, int wPx, int hPx) {
+		this.imageSourceRegion = new ImageStretchLayout.TextureRegion(uPx, vPx, wPx, hPx).normalized();
+	}
+
+	@Override
+	public ImageStretchLayout.TextureRegion getRegion() {
+		return imageSourceRegion;
+	}
+
 	@Override
 	public void setPosition(int x, int y) {
 		this.geometry = new UIElementGeometry(x, y, this.geometry.width, this.geometry.height);
@@ -339,6 +352,8 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 			ghost.setBackgroundStretchMode(this.getBackgroundStretchMode());
 			ImageStretchLayout.NinePatchInsets insets = this.getNinePatchInsets();
 			ghost.setNinePatchInsets(insets.left(), insets.top(), insets.right(), insets.bottom());
+			ImageStretchLayout.TextureRegion region = this.getRegion();
+			ghost.setRegion(region.u(), region.v(), region.width(), region.height());
 		}
 		ghost.setBorder(this.getBorder());
 		ghost.setCornerRadius(this.getCornerRadius());
