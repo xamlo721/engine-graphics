@@ -72,6 +72,8 @@ public final class ImageStretchLayout {
         switch (effective) {
             case FIT:
                 return fit(srcWidth, srcHeight, dstWidth, dstHeight);
+            case COVER:
+                return cover(srcWidth, srcHeight, dstWidth, dstHeight);
             case CENTER:
                 return centerCrop(srcWidth, srcHeight, dstWidth, dstHeight);
             case NINEPATCH:
@@ -112,6 +114,26 @@ public final class ImageStretchLayout {
             shifted.add(new StretchPiece(p.sx() + u, p.sy() + v, p.sw(), p.sh(), p.dx(), p.dy(), p.dw(), p.dh()));
         }
         return shifted;
+    }
+
+    /**
+     * COVER: масштабирование с сохранением пропорций до полного заполнения области;
+     * избыток обрезается симметрично — видна центральная часть изображения. В отличие от
+     * {@link #fit}, пустот не остаётся никогда; в отличие от FILL, пропорции не искажаются.
+     */
+    public static List<StretchPiece> cover(int srcWidth, int srcHeight, float dstWidth, float dstHeight) {
+        if (!validSize(srcWidth, srcHeight, dstWidth, dstHeight)) {
+            return Collections.emptyList();
+        }
+        // Масштаб «впотьмах»: сторона-лимит заполняет обе оси, вторая переполняется.
+        float scale = Math.max(dstWidth / (float)srcWidth, dstHeight / (float)srcHeight);
+        float w = srcWidth * scale;
+        float h = srcHeight * scale;
+        float sx0 = ((w - dstWidth) / 2f) / scale;   // смещение обреза в пикселях источника по X
+        float sy0 = ((h - dstHeight) / 2f) / scale;  // ... и по Y
+        float sw = dstWidth / scale;
+        float sh = dstHeight / scale;
+        return single(sx0, sy0, sw, sh, 0f, 0f, dstWidth, dstHeight);
     }
 
     /** FILL: изображение целиком на всю область элемента (историческое поведение). */

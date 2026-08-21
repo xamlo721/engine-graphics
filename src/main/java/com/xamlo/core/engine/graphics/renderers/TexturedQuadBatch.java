@@ -91,7 +91,9 @@ final class TexturedQuadBatch {
         this.indexData.clear();
         for (int i = 0; i < pieces.size(); ++i) {
             int base = i * 4;
-            this.indexData.put(base).put(base + 1).put(base + 3).put(base + 3).put(base + 1).put(base + 2);
+            // Противочасовая закрутка в NDC: глобальный бэкфес-калллинг (RenderEngine, CCW+BACK)
+            // отрезает квады с обратной ориентацией после Y-флипа матрицы прохода.
+            this.indexData.put(base).put(base + 3).put(base + 1).put(base + 1).put(base + 3).put(base + 2);
         }
 
         GL30.glBindVertexArray((int)this.vaoId);
