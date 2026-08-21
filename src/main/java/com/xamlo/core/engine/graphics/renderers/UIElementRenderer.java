@@ -20,14 +20,17 @@ import com.xamlo.core.engine.graphics.api.gui.IFillIndicator;
 import com.xamlo.core.engine.graphics.api.gui.IFocusable;
 import com.xamlo.core.engine.graphics.api.gui.IHoverable;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
+import com.xamlo.core.engine.graphics.api.gui.IVerticalGradient;
 import com.xamlo.core.engine.graphics.api.gui.IStretchedBackground;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IVisible;
+import com.xamlo.core.engine.graphics.api.gui.elements.IImageView;
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.components.gui.Color;
 import com.xamlo.core.engine.graphics.components.gui.EnumImageStretch;
 import com.xamlo.core.engine.graphics.components.gui.EnumOrientation;
 import com.xamlo.core.engine.graphics.components.gui.FrameRects;
+import com.xamlo.core.engine.graphics.components.gui.GradientStrips;
 import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout;
 import com.xamlo.core.engine.graphics.components.gui.UIElementGeometry;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
@@ -111,8 +114,14 @@ public class UIElementRenderer {
             EnumImageStretch mode = (stretched != null) ? stretched.getBackgroundStretchMode() : EnumImageStretch.FILL;
             ImageStretchLayout.NinePatchInsets insets = (stretched != null)
                     ? stretched.getNinePatchInsets() : ImageStretchLayout.NinePatchInsets.NONE;
-            pieces = ImageStretchLayout.layout(mode, texture.getWidth(), texture.getHeight(),
+            // Подрегион источника: при неполном регионе FILL уходит в CPU-side батч квадов (isPlainFill false),
+            // исторический unit-mesh путь и шейдер не трогаются.
+            final ImageStretchLayout.TextureRegion region = (stretched != null) ? stretched.getRegion()
+                    : ((element instanceof IImageView view) ? view.getRegion() : ImageStretchLayout.TextureRegion.FULL);
+            pieces = ImageStretchLayout.layout(mode, region, texture.getWidth(), texture.getHeight(),
                     geometry.getWidth(), geometry.getHeight(), insets);
+            // Координаты s* фрагментов абсолютные (с учётом смещения региона) — сравнение против полного
+            // размера текстуры корректно отправляет неполный регион в CPU-side батч.
             plainFillPath = ImageStretchLayout.isPlainFill(pieces, texture.getWidth(), texture.getHeight(),
                     geometry.getWidth(), geometry.getHeight());
         }
@@ -171,8 +180,8 @@ public class UIElementRenderer {
 			 */
 			glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
 		} else {
-			texturedBatch.draw(debugUIElement.getShader(), left, right, bottom, top, near, far,
-					element.getAbsX(), element.getAbsY(),
+			texturedBatch.draw(debugUIElement.getShader(), this.mvpMatrix,
+					element.getAbsX(), element.getAbsY(), geometry.getWidth(), geometry.getHeight(),
 					texture.getWidth(), texture.getHeight(), pieces);
 		}
 
@@ -197,6 +206,11 @@ public class UIElementRenderer {
 
                 glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
             }
+        }
+
+        // Вертикальный двухцветный градиент внутри границ элемента (IVerticalGradient).
+        if (element instanceof IVerticalGradient gradient && geometry.getWidth() > 0f && geometry.getHeight() > 0f) {
+            drawGradientSlices(element.getAbsX(), element.getAbsY(), geometry, left, right, bottom, top, gradient);
         }
 
         // Рамка элемента (borderSize > 0) поверх фона. TODO(E3): скругление углов по cornerRadius.
@@ -252,5 +266,49 @@ public class UIElementRenderer {
         }
     }
 
+    /**
+     * Вертикальная рампа от цвета верхней кромки до цвета нижней ({@link IVerticalGradient}): набор
+     * горизонтальных полос {@link GradientStrips}, каждая — тот же единичный меш и uniform'ы цвета/клипа,
+     * что фон и полосы рамки; альфа-составляющая та же (SRC_ALPHA), что у рисования backgroundColor.
+     */
+    private void drawGradientSlices(float absX, float absY, UIElementGeometry geometry,
+                                    float left, float right, float bottom, float top, IVerticalGradient gradient) {
+        IColor topColor = gradient.getTopColor();
+        IColor botColor = gradient.getBottomColor();
+        if (topColor == null || botColor == null) {
+            return; // градиент не задан полностью — ничего не рисуем
+        }
+        List<GradientStrips.Strip> strips = GradientStrips.vertical(geometry.getWidth(), geometry.getHeight());
+        if (strips.isEmpty()) {
+            return;
+        }
+
+        debugUIElement.getShader().setUniform("useTexture", false);
+        for (int i = 0; i < strips.size(); i++) {
+            GradientStrips.Strip strip = strips.get(i);
+            float t = (strip.count() > 1) ? (float) strip.index() / (strip.count() - 1f) : 0f;
+
+            UiSpaceMatrices.quadMatrix(mvpMatrix, left, right, bottom, top,
+                    absX + geometry.getWidth() / 2f, absY + strip.y() + strip.height() / 2f,
+                    geometry.getWidth(), strip.height());
+            debugUIElement.getShader().setUniform("mvp", mvpMatrix);
+            debugUIElement.getShader().setUniform("backgroundColor", mixedColorVector(topColor, botColor, t));
+            glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
+        }
+    }
+
+    /** Линейная интерполяция двух цветов в векторе uniform'а backgroundColor. */
+    private static Vector4f mixedColorVector(IColor a, IColor b, float t) {
+        int ar = lerpChannel(a.getRed(), b.getRed(), t);
+        int ag = lerpChannel(a.getGreen(), b.getGreen(), t);
+        int ab = lerpChannel(a.getBlue(), b.getBlue(), t);
+        int aa = lerpChannel(a.getAlpha(), b.getAlpha(), t);
+        return new Vector4f(ar / 255f, ag / 255f, ab / 255f, aa / 255f);
+    }
+
+    private static int lerpChannel(int from, int to, float t) {
+        int value = (int) Math.round(from + (to - from) * t);
+        return Math.max(0, Math.min(255, value));
+    }
 
 }

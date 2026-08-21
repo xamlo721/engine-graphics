@@ -1,50 +1,21 @@
 package com.xamlo.core.engine.graphics.renderers;
 
-import static org.lwjgl.opengl.GL11.GL_FLOAT;
-import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
-import static org.lwjgl.opengl.GL11.GL_UNSIGNED_INT;
-import static org.lwjgl.opengl.GL11.glDrawElements;
-import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
-import static org.lwjgl.opengl.GL15.GL_ELEMENT_ARRAY_BUFFER;
-import static org.lwjgl.opengl.GL15.GL_STREAM_DRAW;
-import static org.lwjgl.opengl.GL15.glBindBuffer;
-import static org.lwjgl.opengl.GL15.glBufferData;
-import static org.lwjgl.opengl.GL15.glDeleteBuffers;
-import static org.lwjgl.opengl.GL15.glGenBuffers;
-import static org.lwjgl.opengl.GL20.glDisableVertexAttribArray;
-import static org.lwjgl.opengl.GL20.glEnableVertexAttribArray;
-import static org.lwjgl.opengl.GL20.glVertexAttribPointer;
-import static org.lwjgl.opengl.GL30.glBindVertexArray;
-import static org.lwjgl.opengl.GL30.glDeleteVertexArrays;
-import static org.lwjgl.opengl.GL30.glGenVertexArrays;
-import static org.lwjgl.system.MemoryUtil.memAllocFloat;
-import static org.lwjgl.system.MemoryUtil.memAllocInt;
-import static org.lwjgl.system.MemoryUtil.memFree;
-
+import com.xamlo.core.engine.graphics.components.ShaderProgram;
+import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout;
+import java.nio.Buffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.List;
-
 import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.system.MemoryUtil;
 
-import com.xamlo.core.engine.graphics.components.ShaderProgram;
-import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.StretchPiece;
-
-/**
- * Динамический батч текстурированных квадов для режимов растяжения фона, отличных от FILL (E3).
- *
- * <p>Геометрия совпадает с исторической сеткой {@code model.gui.default.element}
- * (позиция float3 + UV float2, stride 20 байт, uint-индексы), поэтому батч рисуется тем же
- * GUI-шейдером без единой новой uniform'ы: позиции вершин — абсолютные логические координаты
- * окна (z = -1 как у остальных проходов элемента), UV — подпрямоугольники исходного
- * изображения. Все квады одного элемента летят в один draw call.</p>
- */
 final class TexturedQuadBatch {
-
-    private static final int FLOATS_PER_VERTEX = 5; // x y z u v
-    /** Глубина прохода элемента (совпадает со значением Tz в UIElementRenderer). */
+    private static final int FLOATS_PER_VERTEX = 5;
     private static final float ELEMENT_Z = -1.0f;
-
     private int vertexBufferId;
     private int indexBufferId;
     private int vaoId;
@@ -52,61 +23,54 @@ final class TexturedQuadBatch {
     private IntBuffer indexData;
     private final Matrix4f mvpMatrix = new Matrix4f();
 
+    TexturedQuadBatch() {
+    }
+
     void init() {
-        this.vaoId = glGenVertexArrays();
-        this.vertexBufferId = glGenBuffers();
-        this.indexBufferId = glGenBuffers();
-
-        glBindVertexArray(vaoId);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
-        glVertexAttribPointer(0, 3, GL_FLOAT, false, 20, 0);   // position: vec3 @ offset 0
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, false, 20, 12);  // texCoord: vec2 @ offset 12
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
-
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
+        this.vaoId = GL30.glGenVertexArrays();
+        this.vertexBufferId = GL15.glGenBuffers();
+        this.indexBufferId = GL15.glGenBuffers();
+        GL30.glBindVertexArray((int)this.vaoId);
+        GL15.glBindBuffer((int)34962, (int)this.vertexBufferId);
+        GL20.glVertexAttribPointer((int)0, (int)3, (int)5126, (boolean)false, (int)20, (long)0L);
+        GL20.glEnableVertexAttribArray((int)0);
+        GL20.glVertexAttribPointer((int)1, (int)2, (int)5126, (boolean)false, (int)20, (long)12L);
+        GL20.glEnableVertexAttribArray((int)1);
+        GL15.glBindBuffer((int)34963, (int)this.indexBufferId);
+        GL30.glBindVertexArray((int)0);
     }
 
     void release() {
-        if (vaoId != 0) {
-            glBindVertexArray(vaoId);
-            glDeleteVertexArrays(vaoId);
-            vaoId = 0;
+        if (this.vaoId != 0) {
+            GL30.glBindVertexArray((int)this.vaoId);
+            GL30.glDeleteVertexArrays((int)this.vaoId);
+            this.vaoId = 0;
         }
-        if (vertexBufferId != 0) {
-            glDeleteBuffers(vertexBufferId);
-            vertexBufferId = 0;
+        if (this.vertexBufferId != 0) {
+            GL15.glDeleteBuffers((int)this.vertexBufferId);
+            this.vertexBufferId = 0;
         }
-        if (indexBufferId != 0) {
-            glDeleteBuffers(indexBufferId);
-            indexBufferId = 0;
+        if (this.indexBufferId != 0) {
+            GL15.glDeleteBuffers((int)this.indexBufferId);
+            this.indexBufferId = 0;
         }
-        freeNative();
+        this.freeNative();
     }
 
-    /**
-     * Рисует фрагменты растяжения одним draw call'ом. Шейдер должен быть уже привязан,
-     * текстура — на слоте 0, юниформы цвета/клипа — выставлены проходом элемента.
-     */
-    void draw(ShaderProgram shader, float left, float right, float bottom, float top,
-              float nearP, float farP, float absX, float absY, int srcWidth, int srcHeight,
-              List<StretchPiece> pieces) {
+    /** Вершины — в конвенции element.obj: нормализованный квадрат [-0.5..+0.5] вокруг центра элемента; */
+    void draw(ShaderProgram shader, Matrix4f mvp, float absX, float absY, float elemW, float elemH,
+              int srcWidth, int srcHeight, List<ImageStretchLayout.StretchPiece> pieces) {
         if (pieces.isEmpty()) {
             return;
         }
-        ensureCapacity(pieces.size());
-
-        final float invW = 1f / srcWidth;
-        final float invH = 1f / srcHeight;
-        vertexData.clear();
-        for (StretchPiece p : pieces) {
-            // Порядок углов и UV совпадают с createCharMesh шрифтового атласа:
-            // локальный +y уходит вверх экрана, v=0 — верхняя строка изображения.
+        this.ensureCapacity(pieces.size());
+        float invW = 1.0f / (float)srcWidth;
+        float invH = 1.0f / (float)srcHeight;
+        // Масштаб до нормализованного квадрата unit-mesh'а (матрица прохода сама умножит на пиксели элемента).
+        final float nxScale = Math.max(1e-6f, 1f / Math.max(1f, elemW));
+        final float nyScale = Math.max(1e-6f, 1f / Math.max(1f, elemH));
+        this.vertexData.clear();
+        for (ImageStretchLayout.StretchPiece p : pieces) {
             float u0 = p.sx() * invW;
             float v0 = p.sy() * invH;
             float u1 = (p.sx() + p.sw()) * invW;
@@ -115,59 +79,55 @@ final class TexturedQuadBatch {
             float yTop = absY + p.dy();
             float x1 = x0 + p.dw();
             float yBottom = yTop + p.dh();
+            // Локальные координаты относительно центра фрагмента -> нормализованный квадрат вокруг центра элемента.
+            float cxp = absX + p.dw() * 0.5f;
+            float cyp = absY + p.dh() * 0.5f;
+            TexturedQuadBatch.putVertex(this.vertexData, (x0 - cxp) * nxScale, -(yTop - cyp) * nyScale, -1.0f, u0, v0);
+            TexturedQuadBatch.putVertex(this.vertexData, (x0 - cxp) * nxScale, -(yBottom - cyp) * nyScale, -1.0f, u0, v1);
+            TexturedQuadBatch.putVertex(this.vertexData, (x1 - cxp) * nxScale, -(yBottom - cyp) * nyScale, -1.0f, u1, v1);
+            TexturedQuadBatch.putVertex(this.vertexData, (x1 - cxp) * nxScale, -(yTop - cyp) * nyScale, -1.0f, u1, v0);
 
-            putVertex(vertexData, x0, yTop, ELEMENT_Z, u0, v0);       // TL
-            putVertex(vertexData, x0, yBottom, ELEMENT_Z, u0, v1);    // BL
-            putVertex(vertexData, x1, yBottom, ELEMENT_Z, u1, v1);    // BR
-            putVertex(vertexData, x1, yTop, ELEMENT_Z, u1, v0);       // TR
         }
-
-        indexData.clear();
-        for (int i = 0; i < pieces.size(); i++) {
+        this.indexData.clear();
+        for (int i = 0; i < pieces.size(); ++i) {
             int base = i * 4;
-            // Тот же порядок граней, что у element.obj и глифов атласа.
-            indexData.put(base).put(base + 1).put(base + 3)
-                    .put(base + 3).put(base + 1).put(base + 2);
+            this.indexData.put(base).put(base + 1).put(base + 3).put(base + 3).put(base + 1).put(base + 2);
         }
 
-        shader.setUniform("mvp", mvpMatrix.zero().setOrtho(left, right, bottom, top, nearP, farP));
-
-        glBindVertexArray(vaoId);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
-        glBufferData(GL_ARRAY_BUFFER, vertexData, GL_STREAM_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexData, GL_STREAM_DRAW);
-        glDrawElements(GL_TRIANGLES, pieces.size() * 6, GL_UNSIGNED_INT, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
+        GL30.glBindVertexArray((int)this.vaoId);
+        GL15.glBindBuffer((int)34962, (int)this.vertexBufferId);
+        GL15.glBufferData((int)34962, (FloatBuffer)this.vertexData, (int)35040);
+        GL15.glBindBuffer((int)34963, (int)this.indexBufferId);
+        GL15.glBufferData((int)34963, (IntBuffer)this.indexData, (int)35040);
+        GL11.glDrawElements((int)4, (int)(pieces.size() * 6), (int)5125, (long)0L);
+        GL15.glBindBuffer((int)34963, (int)0);
+        GL15.glBindBuffer((int)34962, (int)0);
+        GL30.glBindVertexArray((int)0);
     }
 
     private static void putVertex(FloatBuffer out, float x, float y, float z, float u, float v) {
         out.put(x).put(y).put(z).put(u).put(v);
     }
 
-    /** Пересоздаёт нативные буферы под большее число квадов (рост только вперёд). */
     private void ensureCapacity(int quads) {
         int neededVertices = Math.max(quads, 1) * 4;
-        if (vertexData == null || vertexData.capacity() < neededVertices * FLOATS_PER_VERTEX) {
-            freeNative();
-            vertexData = memAllocFloat(neededVertices * FLOATS_PER_VERTEX);
+        if (this.vertexData == null || this.vertexData.capacity() < neededVertices * 5) {
+            this.freeNative();
+            this.vertexData = MemoryUtil.memAllocFloat((int)(neededVertices * 5));
         }
-        if (indexData == null || indexData.capacity() < Math.max(quads, 1) * 6) {
-            indexData = memAllocInt(Math.max(quads, 1) * 6);
+        if (this.indexData == null || this.indexData.capacity() < Math.max(quads, 1) * 6) {
+            this.indexData = MemoryUtil.memAllocInt((int)(Math.max(quads, 1) * 6));
         }
     }
 
     private void freeNative() {
-        if (vertexData != null) {
-            memFree(vertexData);
-            vertexData = null;
+        if (this.vertexData != null) {
+            MemoryUtil.memFree((Buffer)this.vertexData);
+            this.vertexData = null;
         }
-        if (indexData != null) {
-            memFree(indexData);
-            indexData = null;
+        if (this.indexData != null) {
+            MemoryUtil.memFree((Buffer)this.indexData);
+            this.indexData = null;
         }
     }
-
 }
