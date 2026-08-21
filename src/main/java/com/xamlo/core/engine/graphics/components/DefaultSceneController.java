@@ -389,8 +389,11 @@ public class DefaultSceneController implements ISceneController {
 			// клик мимо — снимает.
 			focusNearestFocusable(element);
 
-			if (element instanceof IClickable) {
-				((IClickable)element).getClickListener().onClicked(((IClickable)element));
+			if (element instanceof IClickable clickable) {
+				com.xamlo.core.engine.graphics.api.gui.IClickListener click = clickable.getClickListener();
+				if (click != null) {
+					click.onClicked(clickable);
+				}
 			}
 
 			if (element instanceof IPointer pointer) {
@@ -534,18 +537,25 @@ public class DefaultSceneController implements ISceneController {
 		}
 		
 		
+		syncPointer(ux, uy);
+	}
+
+	/** Пересчитывает ховер/подсказку для виджетов, перестроенных под неподвижным курсором. */
+	public void refreshPointerState() {
+		if (!this.hasLastCursor) return;
+		this.syncPointer(this.lastCursorX, this.lastCursorY);
+	}
+
+	private void syncPointer(float ux, float uy) {
 		for (IUIElement otherElement : scene.getGuiElements()) {
-			if ( otherElement instanceof IHoverable ) {
+			if (otherElement instanceof IHoverable) {
 				((IHoverable)otherElement).setHovered(false);
 			}
 		}
 		IUIElement element = this.scene.findElementAt(ux, uy);
-
 		if (element != null && element instanceof IHoverable) {
-			IHoverable hoverableElement = (IHoverable)element;
-			hoverableElement.setHovered(true);
+			((IHoverable)element).setHovered(true);
 		}
-		
 		updateFromCursor(ux, uy);
 	}
 
