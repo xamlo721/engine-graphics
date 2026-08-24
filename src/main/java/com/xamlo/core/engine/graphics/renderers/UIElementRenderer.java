@@ -124,6 +124,7 @@ public class UIElementRenderer {
             // размера текстуры корректно отправляет неполный регион в CPU-side батч.
             plainFillPath = ImageStretchLayout.isPlainFill(pieces, texture.getWidth(), texture.getHeight(),
                     geometry.getWidth(), geometry.getHeight());
+
         }
 
         debugUIElement.getShader().setUniform("useTexture", texture != null);
@@ -169,8 +170,37 @@ public class UIElementRenderer {
 		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);
 
 
+        // Одиночные нетривиальные режимы растяжения (кроп FILL/FIT/CENTER/COVER) рисуются тем же
+		// рабочим unit-mesh'ом с аффинным преобразованием UV в шейдере: CPU-side батч квадов не
+		// отрисовывается на этом окружении, поэтому мёртвый путь обходим. Мультифрагментные
+		// режимы (nine-patch) остаются на батче как прежде.
+		final boolean affineMode = texture != null && !plainFillPath && pieces.size() == 1;
+		if (affineMode) {
+			ImageStretchLayout.StretchPiece p = pieces.get(0);
+			float texW = Math.max(1f, (float)texture.getWidth());
+			float texH = Math.max(1f, (float)texture.getHeight());
+			debugUIElement.getShader().setUniform("useTexAffine", true);
+			debugUIElement.getShader().setUniform("uvMul",
+			        new org.joml.Vector2f(p.sw() / texW, p.sh() / texH));
+			debugUIElement.getShader().setUniform("uvAdd",
+			        new org.joml.Vector2f(p.sx() / texW, p.sy() / texH));
+			float gw = Math.max(1f, geometry.getWidth());
+			float gh = Math.max(1f, geometry.getHeight());
+			debugUIElement.getShader().setUniform("posScale",
+			        new org.joml.Vector2f(Math.min(1f, p.dw() / gw), Math.min(1f, p.dh() / gh)));
+			debugUIElement.getShader().setUniform("posOffset", new org.joml.Vector2f(0f, 0f));
+		}
+		else if (!affineMode && texture != null && !plainFillPath) {
+			// Мультифрагментные режимы: сброс аффина перед CPU-side батчем.
+			debugUIElement.getShader().setUniform("useTexAffine", false);
+		}
         // Исторический путь: цветной квад или FILL-фон — побайтово то же самое, что до E3.
-		boolean useLegacyQuad = (texture == null) || plainFillPath;
+	// Временный механизм (сага «серый фон»): одиночные нетривиальные режимы растяжения рисуются
+		// тем же рабочим unit-mesh'ом с аффинным преобразованием UV в шейдере.
+		boolean useLegacyQuad = (texture == null) || plainFillPath || affineMode;
+		if ((texture == null) || plainFillPath) {
+			debugUIElement.getShader().setUniform("useTexAffine", false);
+		}
 		if (useLegacyQuad) {
 			/**
 			 * mode: Задает примитивы для рендеринга, в данном случае треугольники. Здесь никаких изменений.

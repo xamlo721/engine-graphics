@@ -45,6 +45,11 @@ public abstract class AbstractUIElement extends AbstractRenderableObject {
 			objectShader.createUniform("texture_sampler");
 			objectShader.createUniform("useClip");
 			objectShader.createUniform("clipRectNdc");
+            objectShader.createUniform("useTexAffine");
+            objectShader.createUniform("uvMul");
+            objectShader.createUniform("uvAdd");
+            objectShader.createUniform("posScale");
+            objectShader.createUniform("posOffset");
 
 		} catch (Exception e) {
 			e.printStackTrace();
