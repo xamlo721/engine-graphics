@@ -77,4 +77,15 @@ public class ImageView extends Widget implements IImageView {
         return super.getRegion();
     }
 
+    /** Якорь обрезания/выравнивания изображения; хранение — на уровне виджета фона. */
+    @Override
+    public void setCropAnchor(float x, float y) {
+        super.setCropAnchor(x, y);
+    }
+
+    @Override
+    public ImageStretchLayout.StretchAnchor getCropAnchor() {
+        return super.getCropAnchor();
+    }
+
 }

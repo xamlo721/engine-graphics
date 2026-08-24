@@ -121,4 +121,24 @@ public class WidgetStretchedBackgroundTest {
         assertTrue(element instanceof com.xamlo.core.engine.graphics.api.gui.IBackgroundSupport);
     }
 
+    @Test
+    public void cropAnchorDefaultsToCenterAndSurvivesSetterClamping() {
+        var widget = new Widget();
+        assertEquals(0.5f, widget.getCropAnchor().x(), 1e-6);
+        assertEquals(0.5f, widget.getCropAnchor().y(), 1e-6);
+
+        widget.setCropAnchor(-2f, 7f);
+        assertEquals(0f, widget.getCropAnchor().x(), 1e-6);   // климпинг до границ единичного квадрата
+        assertEquals(1f, widget.getCropAnchor().y(), 1e-6);
+
+        // NaN трактуется как центр (защита от кривых внешних данных), а не «прижато к углу».
+        widget.setCropAnchor(Float.NaN, Float.NaN);
+        assertEquals(0.5f, widget.getCropAnchor().x(), 1e-6);
+        assertEquals(0.5f, widget.getCropAnchor().y(), 1e-6);
+
+        // Через интерфейс IStretchedBackground читается то же самое состояние.
+        com.xamlo.core.engine.graphics.api.gui.IStretchedBackground asInterface = widget;
+        assertSame(asInterface.getCropAnchor(), widget.getCropAnchor());
+    }
+
 }

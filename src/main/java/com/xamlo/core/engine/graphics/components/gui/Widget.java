@@ -42,6 +42,8 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 	protected EnumImageStretch backgroundStretchMode;
 	protected ImageStretchLayout.NinePatchInsets ninePatchInsets;
 	protected ImageStretchLayout.TextureRegion imageSourceRegion;
+	// Якорь обрезания/выравнивания фонового изображения (COVER/CENTER/FIT); дефолт — центр.
+	protected ImageStretchLayout.StretchAnchor cropAnchor = ImageStretchLayout.StretchAnchor.CENTER;
 	protected IColor backgroundColor;
 	protected IFont font;
 	protected String toolTipText;
@@ -71,6 +73,7 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 		this.backgroundStretchMode = EnumImageStretch.FILL;
 		this.ninePatchInsets = ImageStretchLayout.NinePatchInsets.NONE;
 		this.imageSourceRegion = ImageStretchLayout.TextureRegion.FULL;
+		this.cropAnchor = ImageStretchLayout.StretchAnchor.CENTER;
 
 	}
 	
@@ -251,6 +254,17 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 	@Override
 	public ImageStretchLayout.TextureRegion getRegion() {
 		return imageSourceRegion;
+	}
+
+	/** Якорь обрезания/выравнивания фона (COVER/CENTER/FIT); компоненты вне [0..1] обрезаются до границ. */
+	@Override
+	public void setCropAnchor(float x, float y) {
+		this.cropAnchor = new ImageStretchLayout.StretchAnchor(x, y).clamped();
+	}
+
+	@Override
+	public ImageStretchLayout.StretchAnchor getCropAnchor() {
+		return cropAnchor;
 	}
 
 	@Override

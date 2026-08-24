@@ -118,8 +118,11 @@ public class UIElementRenderer {
             // исторический unit-mesh путь и шейдер не трогаются.
             final ImageStretchLayout.TextureRegion region = (stretched != null) ? stretched.getRegion()
                     : ((element instanceof IImageView view) ? view.getRegion() : ImageStretchLayout.TextureRegion.FULL);
+            // Якорь обрезания/выравнивания (COVER/CENTER/FIT); дефолт — центр = историческое поведение.
+            final ImageStretchLayout.StretchAnchor cropAnchor = (stretched != null) ? stretched.getCropAnchor()
+                    : ((element instanceof IImageView view) ? view.getCropAnchor() : ImageStretchLayout.StretchAnchor.CENTER);
             pieces = ImageStretchLayout.layout(mode, region, texture.getWidth(), texture.getHeight(),
-                    geometry.getWidth(), geometry.getHeight(), insets);
+                    geometry.getWidth(), geometry.getHeight(), insets, cropAnchor.x(), cropAnchor.y());
             // Координаты s* фрагментов абсолютные (с учётом смещения региона) — сравнение против полного
             // размера текстуры корректно отправляет неполный регион в CPU-side батч.
             plainFillPath = ImageStretchLayout.isPlainFill(pieces, texture.getWidth(), texture.getHeight(),

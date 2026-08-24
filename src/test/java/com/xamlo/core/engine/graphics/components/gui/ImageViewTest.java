@@ -87,4 +87,24 @@ public class ImageViewTest {
         assertEquals(4, insets.bottom());
     }
 
+    @Test
+    public void cropAnchorDefaultsToCenterAndClampsOutOfRange() {
+        ImageView view = new ImageView();
+        var a = view.getCropAnchor();
+        assertEquals(0.5f, a.x(), 1e-6);
+        assertEquals(0.5f, a.y(), 1e-6);
+
+        view.setCropAnchor(-3f, 9f);
+        a = view.getCropAnchor();
+        assertEquals(0f, a.x(), 1e-6);   // климпинг до границ единичного квадрата
+        assertEquals(1f, a.y(), 1e-6);
+
+        // Синхронизация с уровнем виджета: оба уровня читают одно и то же значение.
+        view.setStretchMode(EnumImageStretch.COVER);
+        view.setBackgroundStretchMode(view.getBackgroundStretchMode());
+        view.setCropAnchor(0.25f, 0.75f);
+        assertEquals(0.25f, view.getCropAnchor().x(), 1e-6);
+        assertTrue(view instanceof com.xamlo.core.engine.graphics.api.gui.IStretchedBackground);
+    }
+
 }

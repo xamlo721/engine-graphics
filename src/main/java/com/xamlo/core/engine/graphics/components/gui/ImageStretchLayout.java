@@ -35,6 +35,24 @@ public final class ImageStretchLayout {
             float dx, float dy, float dw, float dh) {
     }
 
+    /**
+     * Якорь выравнивания/обрезания в координатах единичного квадрата [0..1]²:
+     * (0,0) — левый верхний угол, (1,1) — правый нижний, (0.5,0.5) — центр (дефолт).
+     * Правило совпадает с процентным background-position/object-position: доля свободного
+     * места или переполнения, остающаяся СЛЕВА и СВЕРХУ, равна x/y якоря; при переполнении
+     * обрезается противоположная часть, поэтому якорь задаёт «прижатый» к элементу участок
+     * исходника. Действует на режимы COVER/CENTER/FIT; FILL и NINEPATCH его игнорируют.
+     */
+    public record StretchAnchor(float x, float y) {
+
+        public static final StretchAnchor CENTER = new StretchAnchor(0.5f, 0.5f);
+
+        /** Компоненты вне [0..1] обрезаются до границ (защита от внешних данных). */
+        public StretchAnchor clamped() {
+            return new StretchAnchor(clampUnit(x), clampUnit(y));
+        }
+    }
+
     /** Борды nine-patch по сторонам изображения: левый, верхний, правый, нижний (px). */
     public record NinePatchInsets(int left, int top, int right, int bottom) {
 
@@ -68,14 +86,22 @@ public final class ImageStretchLayout {
     /** Диспетчер режима растяжения; {@code mode == null} трактуется как FILL. */
     public static List<StretchPiece> layout(EnumImageStretch mode, int srcWidth, int srcHeight,
                                            float dstWidth, float dstHeight, NinePatchInsets insets) {
+        return layout(mode, srcWidth, srcHeight, dstWidth, dstHeight, insets, StretchAnchor.CENTER.x(),
+                StretchAnchor.CENTER.y());
+    }
+
+    /** Тот же диспетчер с якорем обрезания/выравнивания (см. {@link StretchAnchor}); центр = историческое поведение. */
+    public static List<StretchPiece> layout(EnumImageStretch mode, int srcWidth, int srcHeight,
+                                           float dstWidth, float dstHeight, NinePatchInsets insets,
+                                           float anchorX, float anchorY) {
         EnumImageStretch effective = (mode == null) ? EnumImageStretch.FILL : mode;
         switch (effective) {
             case FIT:
-                return fit(srcWidth, srcHeight, dstWidth, dstHeight);
+                return fit(srcWidth, srcHeight, dstWidth, dstHeight, anchorX, anchorY);
             case COVER:
-                return cover(srcWidth, srcHeight, dstWidth, dstHeight);
+                return cover(srcWidth, srcHeight, dstWidth, dstHeight, anchorX, anchorY);
             case CENTER:
-                return centerCrop(srcWidth, srcHeight, dstWidth, dstHeight);
+                return centerCrop(srcWidth, srcHeight, dstWidth, dstHeight, anchorX, anchorY);
             case NINEPATCH:
                 return ninePatch(srcWidth, srcHeight, insets, dstWidth, dstHeight);
             case FILL:
@@ -94,6 +120,14 @@ public final class ImageStretchLayout {
      */
     public static List<StretchPiece> layout(EnumImageStretch mode, TextureRegion region, int srcWidth, int srcHeight,
                                            float dstWidth, float dstHeight, NinePatchInsets insets) {
+        return layout(mode, region, srcWidth, srcHeight, dstWidth, dstHeight, insets, StretchAnchor.CENTER.x(),
+                StretchAnchor.CENTER.y());
+    }
+
+    /** Диспетчер с подрегином и якорем обрезания/выравнивания (см. {@link StretchAnchor}). */
+    public static List<StretchPiece> layout(EnumImageStretch mode, TextureRegion region, int srcWidth, int srcHeight,
+                                           float dstWidth, float dstHeight, NinePatchInsets insets,
+                                           float anchorX, float anchorY) {
         if (!validSize(srcWidth, srcHeight, dstWidth, dstHeight)) {
             return Collections.emptyList();
         }
@@ -105,7 +139,7 @@ public final class ImageStretchLayout {
         if (cropW <= 0 || cropH <= 0) {
             return Collections.emptyList();
         }
-        List<StretchPiece> pieces = layout(mode, cropW, cropH, dstWidth, dstHeight, insets);
+        List<StretchPiece> pieces = layout(mode, cropW, cropH, dstWidth, dstHeight, insets, anchorX, anchorY);
         if (u == 0 && v == 0) {
             return pieces;
         }
@@ -122,6 +156,12 @@ public final class ImageStretchLayout {
      * {@link #fit}, пустот не остаётся никогда; в отличие от FILL, пропорции не искажаются.
      */
     public static List<StretchPiece> cover(int srcWidth, int srcHeight, float dstWidth, float dstHeight) {
+        return cover(srcWidth, srcHeight, dstWidth, dstHeight, StretchAnchor.CENTER.x(), StretchAnchor.CENTER.y());
+    }
+
+    /** COVER с якорем: переполнение обрезается со стороны, противоположной якорю (см. {@link StretchAnchor}). */
+    public static List<StretchPiece> cover(int srcWidth, int srcHeight, float dstWidth, float dstHeight,
+                                          float anchorX, float anchorY) {
         if (!validSize(srcWidth, srcHeight, dstWidth, dstHeight)) {
             return Collections.emptyList();
         }
@@ -129,8 +169,8 @@ public final class ImageStretchLayout {
         float scale = Math.max(dstWidth / (float)srcWidth, dstHeight / (float)srcHeight);
         float w = srcWidth * scale;
         float h = srcHeight * scale;
-        float sx0 = ((w - dstWidth) / 2f) / scale;   // смещение обреза в пикселях источника по X
-        float sy0 = ((h - dstHeight) / 2f) / scale;  // ... и по Y
+        float sx0 = ((w - dstWidth) / scale) * clampUnit(anchorX);   // смещение обреза в пикселях источника по X
+        float sy0 = ((h - dstHeight) / scale) * clampUnit(anchorY);  // ... и по Y
         float sw = dstWidth / scale;
         float sh = dstHeight / scale;
         return single(sx0, sy0, sw, sh, 0f, 0f, dstWidth, dstHeight);
@@ -146,18 +186,31 @@ public final class ImageStretchLayout {
 
     /** Прямоугольник вписанного с сохранением пропорций по центру области. */
     public static StretchRect computeFitRect(int srcWidth, int srcHeight, float dstWidth, float dstHeight) {
+        return computeFitRect(srcWidth, srcHeight, dstWidth, dstHeight, StretchAnchor.CENTER.x(),
+                StretchAnchor.CENTER.y());
+    }
+
+    /** Прямоугольник вписанного: свободные поля распределяются по якорю (см. {@link StretchAnchor}). */
+    public static StretchRect computeFitRect(int srcWidth, int srcHeight, float dstWidth, float dstHeight,
+                                            float anchorX, float anchorY) {
         if (!validSize(srcWidth, srcHeight, dstWidth, dstHeight)) {
             return new StretchRect(0f, 0f, 0f, 0f);
         }
         float scale = Math.min(dstWidth / srcWidth, dstHeight / srcHeight);
         float w = srcWidth * scale;
         float h = srcHeight * scale;
-        return new StretchRect((dstWidth - w) / 2f, (dstHeight - h) / 2f, w, h);
+        return new StretchRect((dstWidth - w) * clampUnit(anchorX), (dstHeight - h) * clampUnit(anchorY), w, h);
     }
 
     /** FIT: изображение целиком, уменьшенное/увеличенное до вписывания и отцентрованное. */
     public static List<StretchPiece> fit(int srcWidth, int srcHeight, float dstWidth, float dstHeight) {
-        StretchRect rect = computeFitRect(srcWidth, srcHeight, dstWidth, dstHeight);
+        return fit(srcWidth, srcHeight, dstWidth, dstHeight, StretchAnchor.CENTER.x(), StretchAnchor.CENTER.y());
+    }
+
+    /** FIT с якорем выравнивания letterbox-полей (см. {@link StretchAnchor}). */
+    public static List<StretchPiece> fit(int srcWidth, int srcHeight, float dstWidth, float dstHeight,
+                                         float anchorX, float anchorY) {
+        StretchRect rect = computeFitRect(srcWidth, srcHeight, dstWidth, dstHeight, anchorX, anchorY);
         if (rect.width() <= 0f || rect.height() <= 0f) {
             return Collections.emptyList();
         }
@@ -169,11 +222,20 @@ public final class ImageStretchLayout {
      * обрезается пересечением с границами элемента (видна центральная часть).
      */
     public static List<StretchPiece> centerCrop(int srcWidth, int srcHeight, float dstWidth, float dstHeight) {
+        return centerCrop(srcWidth, srcHeight, dstWidth, dstHeight, StretchAnchor.CENTER.x(),
+                StretchAnchor.CENTER.y());
+    }
+
+    /** CENTER с якорем: переполнение обрезается со стороны, противоположной якорю (см. {@link StretchAnchor}). */
+    public static List<StretchPiece> centerCrop(int srcWidth, int srcHeight, float dstWidth, float dstHeight,
+                                               float anchorX, float anchorY) {
         if (!validSize(srcWidth, srcHeight, dstWidth, dstHeight)) {
             return Collections.emptyList();
         }
-        float imgX = (dstWidth - srcWidth) / 2f;
-        float imgY = (dstHeight - srcHeight) / 2f;
+        // Позиция левого верхнего угла изображения в области: при переполнении отрицательна —
+        // сколько «уходит за край», задаёт та же доля якоря, что и свободное поле без переполнения.
+        float imgX = (dstWidth - srcWidth) * clampUnit(anchorX);
+        float imgY = (dstHeight - srcHeight) * clampUnit(anchorY);
         // Видимое окно в координатах исходного изображения.
         float leftSrc = Math.max(0f, -imgX);
         float topSrc = Math.max(0f, -imgY);
@@ -295,6 +357,11 @@ public final class ImageStretchLayout {
         if (sw > 0f && sh > 0f && dw > 0f && dh > 0f) {
             out.add(new StretchPiece(sx, sy, sw, sh, dx, dy, dw, dh));
         }
+    }
+
+    /** Компонент якоря вне [0..1] обрезается до границ; NaN трактуется как центр. */
+    private static float clampUnit(float v) {
+        return Float.isNaN(v) ? 0.5f : Math.min(1f, Math.max(0f, v));
     }
 
     private static boolean validSize(int srcWidth, int srcHeight, float dstWidth, float dstHeight) {

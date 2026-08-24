@@ -2,6 +2,7 @@ package com.xamlo.core.engine.graphics.api.gui.elements;
 
 import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.components.gui.EnumImageStretch;
+import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.StretchAnchor;
 import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.TextureRegion;
 
 /**
@@ -47,6 +48,17 @@ public interface IImageView extends IWidget {
 
     default TextureRegion getRegion() {
         return TextureRegion.FULL;
+    }
+
+    /**
+     * Якорь обрезания/выравнивания изображения в координатах [0..1]² (см. {@link StretchAnchor}):
+     * действует на COVER/CENTER/FIT, дефолт — центр; хранение — на уровне виджета фона.
+     */
+    default void setCropAnchor(float x, float y) {
+    }
+
+    default StretchAnchor getCropAnchor() {
+        return StretchAnchor.CENTER;
     }
 
 }
