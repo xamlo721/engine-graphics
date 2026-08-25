@@ -20,6 +20,20 @@ public class UnicodeGlyphFont implements IFontResource<String> {
     private String identifier;
     private IFontAtlas fontAtlas;
 
+    // Шов к растеризующему бэкенду (engine-ui → engine-graphics): без регистрации идёт прямой путь в GlyphGenerator.
+    private static volatile com.xamlo.core.engine.graphics.fontsystem.GlyphRasterizer rasterizer;
+
+    public static void setRasterizer(com.xamlo.core.engine.graphics.fontsystem.GlyphRasterizer impl) {
+        rasterizer = impl;
+    }
+
+    private GlyphPage makeGlyph(int codePoint) {
+        if (rasterizer != null) {
+            return rasterizer.rasterize(codePoint, font, IMG_SIZE, MARGIN, spacing, antiAlias);
+        }
+        return GlyphGenerator.generateGlyph(codePoint, font, IMG_SIZE, MARGIN, spacing, antiAlias);
+    }
+
     /**
      * Construct a glyph font with specified font
      * Defaults to use antialiasing, a spacing of 0 and defaults to initialise a cache with ASCII characters
@@ -57,7 +71,7 @@ public class UnicodeGlyphFont implements IFontResource<String> {
         this.identifier = identifier;
 
         for (int id : initialCache) {
-        	GlyphPage glyph = GlyphGenerator.generateGlyph(id, font, IMG_SIZE, MARGIN, spacing, antiAlias);
+        	GlyphPage glyph = makeGlyph(id);
             GLYPH_REGISTRY.put(id, glyph);
         }
         
@@ -150,7 +164,7 @@ public class UnicodeGlyphFont implements IFontResource<String> {
         int glyphID = getGlyphID(c);
         
         if (!GLYPH_REGISTRY.containsKey(glyphID)) {
-        	GlyphPage glyph = GlyphGenerator.generateGlyph(glyphID, font, IMG_SIZE, MARGIN, spacing, antiAlias);
+        	GlyphPage glyph = makeGlyph(glyphID);
             GLYPH_REGISTRY.put(glyphID, glyph);
         }
         
