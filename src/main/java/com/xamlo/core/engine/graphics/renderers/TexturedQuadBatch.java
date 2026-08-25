@@ -95,6 +95,12 @@ final class TexturedQuadBatch {
             // отрезает квады с обратной ориентацией после Y-флипа матрицы прохода.
             this.indexData.put(base).put(base + 3).put(base + 1).put(base + 1).put(base + 3).put(base + 2);
         }
+        // NIO-overload glBufferData читает участок [position..limit]. После заполнения
+        // буфера впритык position == limit и без rewind каждый кадр уходил бы нулевой
+        // DYNAMIC_DRAW re-upload, орфанив GPU-буфер (хронические INVALID_OPERATION/OOM
+        // в каждом кадре на элементах с динамическим батчем квадов).
+        this.vertexData.rewind();
+        this.indexData.rewind();
 
         GL30.glBindVertexArray((int)this.vaoId);
         GL15.glBindBuffer((int)34962, (int)this.vertexBufferId);
