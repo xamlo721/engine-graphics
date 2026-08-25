@@ -1,7 +1,7 @@
 package com.xamlo.core.engine.graphics.components.gui;
 
 import com.xamlo.core.engine.graphics.api.gui.elements.IImageView;
-import com.xamlo.core.engine.graphics.components.AbstractTexture;
+import com.xamlo.core.engine.graphics.api.gui.ITextureHandle;
 
 /**
  * Отображение текстуры в пределах геометрии элемента. Все режимы растяжения из
@@ -15,7 +15,7 @@ import com.xamlo.core.engine.graphics.components.AbstractTexture;
  */
 public class ImageView extends Widget implements IImageView {
 
-    protected AbstractTexture image;
+    protected ITextureHandle image;
     protected EnumImageStretch stretchMode;
 
     public ImageView() {
@@ -26,13 +26,13 @@ public class ImageView extends Widget implements IImageView {
     }
 
     @Override
-    public void setImage(AbstractTexture image) {
+    public void setImage(ITextureHandle image) {
         this.image = image;
         setBackgroundImage(image);
     }
 
     @Override
-    public AbstractTexture getImage() {
+    public ITextureHandle getImage() {
         return this.image != null ? this.image : getBackgroundImage();
     }
 

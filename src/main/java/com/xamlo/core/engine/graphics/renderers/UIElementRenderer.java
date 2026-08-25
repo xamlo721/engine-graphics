@@ -8,6 +8,7 @@ import static org.lwjgl.opengl.GL13.glActiveTexture;
 
 import java.util.List;
 
+import com.xamlo.core.engine.graphics.api.gui.ITextureHandle;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
@@ -25,7 +26,6 @@ import com.xamlo.core.engine.graphics.api.gui.IStretchedBackground;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.IVisible;
 import com.xamlo.core.engine.graphics.api.gui.elements.IImageView;
-import com.xamlo.core.engine.graphics.components.AbstractTexture;
 import com.xamlo.core.engine.graphics.components.gui.Color;
 import com.xamlo.core.engine.graphics.components.gui.EnumImageStretch;
 import com.xamlo.core.engine.graphics.components.gui.EnumOrientation;
@@ -104,7 +104,7 @@ public class UIElementRenderer {
 	    debugUIElement.getShader().setUniform("mvp", mvpMatrix);
 	    
         final IBackgroundSupport background = (element instanceof IBackgroundSupport b) ? b : null;
-        final AbstractTexture texture = (background != null && background.hasBackgroundImage())
+        final ITextureHandle texture = (background != null && background.hasBackgroundImage())
                 ? background.getBackgroundImage() : null;
         // E3: режим растяжения текстурированного фона. По умолчанию FILL — исторический путь unit-mesh'а не меняется.
         final IStretchedBackground stretched = (element instanceof IStretchedBackground s) ? s : null;

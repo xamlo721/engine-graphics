@@ -1,6 +1,6 @@
 package com.xamlo.core.engine.graphics.api.gui;
 
-import com.xamlo.core.engine.graphics.components.AbstractTexture;
+import com.xamlo.core.engine.graphics.api.gui.ITextureHandle;
 import com.xamlo.core.engine.graphics.components.gui.EnumIconPosition;
 
 public interface IIconSupport {
@@ -10,14 +10,14 @@ public interface IIconSupport {
      * 
      * @param icon Текстура иконки (может быть null для удаления иконки)
      */
-    void setIcon(AbstractTexture icon);
+    void setIcon(ITextureHandle icon);
 
     /**
      * Возвращает иконку элемента.
      * 
      * @return Текстура иконки или null, если иконка не установлена
      */
-    AbstractTexture getIcon();
+    ITextureHandle getIcon();
     
     /**
      * Устанавливает позицию иконки относительно текста.

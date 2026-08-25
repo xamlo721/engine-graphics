@@ -1,8 +1,9 @@
 package com.xamlo.core.engine.graphics.components;
 
+import com.xamlo.core.engine.graphics.api.gui.ITextureHandle;
 import com.xamlo.engine.api.resources.ITextureResource;
 
-public abstract class AbstractTexture implements ITextureResource<String> {
+public abstract class AbstractTexture implements ITextureResource<String>, ITextureHandle {
 
 	protected final String identifier;
 	// Идентификатор текстуры OpenGL

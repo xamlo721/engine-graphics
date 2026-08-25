@@ -1,6 +1,6 @@
 package com.xamlo.core.engine.graphics.api.gui;
 
-import com.xamlo.core.engine.graphics.components.AbstractTexture;
+import com.xamlo.core.engine.graphics.api.gui.ITextureHandle;
 
 public interface IBackgroundSupport {
 
@@ -8,10 +8,10 @@ public interface IBackgroundSupport {
 	public boolean hasBackgroundImage();
 	
     // Возвращает фоновое изображение виджета
-	public AbstractTexture getBackgroundImage();
+	public ITextureHandle getBackgroundImage();
 	
     // Устанавливает фоновое изображение виджета
-	public void setBackgroundImage(AbstractTexture image);
+	public void setBackgroundImage(ITextureHandle image);
 
     // Устанавливает цвет фона виджета
     public void setBackgroundColor(IColor color);

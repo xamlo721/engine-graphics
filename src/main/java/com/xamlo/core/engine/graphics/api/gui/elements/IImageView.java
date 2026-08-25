@@ -1,6 +1,6 @@
 package com.xamlo.core.engine.graphics.api.gui.elements;
 
-import com.xamlo.core.engine.graphics.components.AbstractTexture;
+import com.xamlo.core.engine.graphics.api.gui.ITextureHandle;
 import com.xamlo.core.engine.graphics.components.gui.EnumImageStretch;
 import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.StretchAnchor;
 import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.TextureRegion;
@@ -10,9 +10,9 @@ import com.xamlo.core.engine.graphics.components.gui.ImageStretchLayout.TextureR
  */
 public interface IImageView extends IWidget {
 
-    void setImage(AbstractTexture image);
+    void setImage(ITextureHandle image);
 
-    AbstractTexture getImage();
+    ITextureHandle getImage();
 
     void setStretchMode(EnumImageStretch mode);
 
@@ -23,7 +23,7 @@ public interface IImageView extends IWidget {
      * Дефолтная реализация делегирует setImage/setStretchMode, поэтому даже реализации
      * вне {@code Widget} получают осмысленное поведение без правок.
      */
-    default void setBackgroundImage(AbstractTexture image, EnumImageStretch mode) {
+    default void setBackgroundImage(ITextureHandle image, EnumImageStretch mode) {
         setImage(image);
         if (mode != null) {
             setStretchMode(mode);

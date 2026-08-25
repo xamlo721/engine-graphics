@@ -7,7 +7,7 @@ import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.elements.IWidget;
 import com.xamlo.core.engine.graphics.api.gui.font.IFont;
-import com.xamlo.core.engine.graphics.components.AbstractTexture;
+import com.xamlo.core.engine.graphics.api.gui.ITextureHandle;
 import com.xamlo.core.engine.graphics.font.ApplicationFont;
 
 import com.xamlo.core.engine.graphics.api.gui.IDraggable;
@@ -38,7 +38,7 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 	protected boolean isEnable;
 	protected boolean focusable;
 	protected boolean focused;
-	protected AbstractTexture backgroundImage;
+	protected ITextureHandle backgroundImage;
 	protected EnumImageStretch backgroundStretchMode;
 	protected ImageStretchLayout.NinePatchInsets ninePatchInsets;
 	protected ImageStretchLayout.TextureRegion imageSourceRegion;
@@ -208,7 +208,7 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 	}
 	
 	/** Устанавливает фоновое изображение и его режим растяжения; null-режим текущий не меняет. */
-	public void setBackgroundImage(AbstractTexture image, EnumImageStretch mode) {
+	public void setBackgroundImage(ITextureHandle image, EnumImageStretch mode) {
 		setBackgroundImage(image);
 		if (mode != null) {
 			setBackgroundStretchMode(mode);
@@ -216,12 +216,12 @@ public class Widget implements IWidget, IDropTarget, IDraggable, IBorderSupport,
 	}
 
 	@Override
-	public void setBackgroundImage(AbstractTexture image) {
+	public void setBackgroundImage(ITextureHandle image) {
 		this.backgroundImage = image;
 	}
 
 	@Override
-	public AbstractTexture getBackgroundImage() {
+	public ITextureHandle getBackgroundImage() {
 		return this.backgroundImage;
 	}
 

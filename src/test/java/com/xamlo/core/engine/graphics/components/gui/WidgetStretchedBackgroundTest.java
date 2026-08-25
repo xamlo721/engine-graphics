@@ -32,7 +32,7 @@ public class WidgetStretchedBackgroundTest {
      * правки — новые члены ушли в default-методы расширенного интерфейса.
      */
     private abstract static class PlainBackgroundElement implements com.xamlo.core.engine.graphics.api.gui.IBackgroundSupport {
-        protected AbstractTexture image;
+        protected com.xamlo.core.engine.graphics.api.gui.ITextureHandle image;
 
         @Override
         public boolean hasBackgroundImage() {
@@ -40,12 +40,12 @@ public class WidgetStretchedBackgroundTest {
         }
 
         @Override
-        public AbstractTexture getBackgroundImage() {
+        public com.xamlo.core.engine.graphics.api.gui.ITextureHandle getBackgroundImage() {
             return image;
         }
 
         @Override
-        public void setBackgroundImage(AbstractTexture image) {
+        public void setBackgroundImage(com.xamlo.core.engine.graphics.api.gui.ITextureHandle image) {
             this.image = image;
         }
 

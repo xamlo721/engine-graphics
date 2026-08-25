@@ -6,7 +6,7 @@ import com.xamlo.core.engine.graphics.api.gui.ITooltipSupport;
 import com.xamlo.core.engine.graphics.api.gui.IClickListener;
 import com.xamlo.core.engine.graphics.api.gui.IColor;
 import com.xamlo.core.engine.graphics.api.gui.elements.IPushButton;
-import com.xamlo.core.engine.graphics.components.AbstractTexture;
+import com.xamlo.core.engine.graphics.api.gui.ITextureHandle;
 
 public class PushButton extends Label implements IPushButton, IDraggable, ITooltipSupport {
 
@@ -17,7 +17,7 @@ public class PushButton extends Label implements IPushButton, IDraggable, IToolt
 	protected int buttonBorderSize;
 	protected IColor buttonBorderColor;
 	protected int buttonCornerRadius;
-    protected AbstractTexture buttonIcon;
+    protected ITextureHandle buttonIcon;
     protected EnumIconPosition buttonIconPosition;
     protected int buttonIconSpacing;
     protected EnumAlignment buttonAlignment;
@@ -124,12 +124,12 @@ protected String toolTipTest = "";
     }
 
     @Override
-    public void setIcon(AbstractTexture icon) {
+    public void setIcon(ITextureHandle icon) {
         this.buttonIcon = icon;
     }
 
     @Override
-    public AbstractTexture getIcon() {
+    public ITextureHandle getIcon() {
         return buttonIcon;
     }
 
