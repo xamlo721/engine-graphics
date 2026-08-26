@@ -297,13 +297,6 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.register(MouseDragAndropEvent.class, sceneController);
 		EventManager.register(WindowResizeEvent.class, sceneController);
 
-		// Клипборд: GLFW-вызовы выполняются на этом (рендер) потоке через очередь задач.
-		Clipboard.init(renderTaskQueue);
-		// Шов клипборда: UI-слой ходит через нейтральный SystemClipboard (регистрация GLFW-бэкенда здесь).
-		com.xamlo.core.engine.graphics.api.gui.SystemClipboard.register(new com.xamlo.core.engine.graphics.api.gui.ISystemClipboard() {
-			@Override public void setString(String text) { Clipboard.setString(text); }
-			@Override public String getString() { return Clipboard.getString(); }
-		});
 		// Шов глифовых атласов: UI-слой строит их через фабрику графического бэкенда (mesh-pipeline остаётся здесь).
 		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setAtlasFactory(f -> new com.xamlo.core.engine.graphics.font.FontAtlas(f));
 		// Шов реестра шрифтов: UI виджеты получают лица через провайдер бэкенда вместо прямого вызова FontSystem.
@@ -311,6 +304,14 @@ public class RenderEngine implements IRenderEngine {
 		// Шов растеризации глифов: UI не знает AWT-генератор — графический бэкенд подставляет свой при старте.
 		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setRasterizer((c, f, s, m, sp, aa) ->
 				com.xamlo.core.engine.graphics.fontsystem.GlyphGenerator.generateGlyph(c, f, s, m, sp, aa));
+
+		// Клипборд: GLFW-вызовы выполняются на этом (рендер) потоке через очередь задач.
+		Clipboard.init(renderTaskQueue);
+		// Шов клипборда: UI-слой ходит через нейтральный SystemClipboard (регистрация GLFW-бэкенда здесь).
+		com.xamlo.core.engine.graphics.api.gui.SystemClipboard.register(new com.xamlo.core.engine.graphics.api.gui.ISystemClipboard() {
+			@Override public void setString(String text) { Clipboard.setString(text); }
+			@Override public String getString() { return Clipboard.getString(); }
+		});
 
 	    this.isRendering = true;
 
