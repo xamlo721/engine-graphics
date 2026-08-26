@@ -8,10 +8,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import com.xamlo.core.engine.graphics.components.FontBackendForTests;
+
 import com.xamlo.core.engine.graphics.api.gui.ITextFieldChangeListener;
 import com.xamlo.core.engine.graphics.api.gui.elements.ITextField;
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 
+@org.junit.jupiter.api.extension.ExtendWith(FontBackendForTests.class)
 public class TextFieldTest {
 
     private static class SteadyCaretField extends TextField {

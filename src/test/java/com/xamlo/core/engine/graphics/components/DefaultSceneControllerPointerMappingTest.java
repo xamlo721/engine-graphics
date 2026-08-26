@@ -29,6 +29,7 @@ import com.xamlo.engine.device.events.MouseClickEvent;
  * переводятся в пространство сетки ДО хит-теста — иначе после ресайза окна кнопки и их
  * точки нажатия рассинхронизируются. Без сетки маппинг identity (legacy-поведение).
  */
+@org.junit.jupiter.api.extension.ExtendWith(FontBackendForTests.class)
 public class DefaultSceneControllerPointerMappingTest {
 
 	@AfterEach

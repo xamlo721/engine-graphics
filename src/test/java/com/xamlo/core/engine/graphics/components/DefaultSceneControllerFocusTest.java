@@ -35,6 +35,7 @@ import com.xamlo.engine.device.events.MouseScrollEvent;
 import com.xamlo.engine.device.events.MouseHoldEvent;
 import com.xamlo.engine.device.events.MouseHoverEvent;
 
+@org.junit.jupiter.api.extension.ExtendWith(FontBackendForTests.class)
 public class DefaultSceneControllerFocusTest {
 
     /** Сцена из плоского списка элементов, hit-test по containsPoint (обратный порядок). */

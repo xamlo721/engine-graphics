@@ -27,6 +27,7 @@ import com.xamlo.engine.device.events.MouseHoverEvent;
  * Всплывающие подсказки: таймер на каждом кадре (MouseHoldEvent), показ рядом с курсором,
  * пере-задержка при смене цели, обход к ближайшему предку с текстом, краевые клампы.
  */
+@org.junit.jupiter.api.extension.ExtendWith(FontBackendForTests.class)
 public class DefaultSceneControllerTooltipTest {
 
     /** Сцена из плоского списка элементов, hit-test по containsPoint (обратный порядок). */

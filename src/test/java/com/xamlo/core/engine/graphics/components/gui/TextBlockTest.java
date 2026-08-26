@@ -9,9 +9,12 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.xamlo.core.engine.graphics.components.FontBackendForTests;
+
 import com.xamlo.core.engine.graphics.api.gui.TextLineSpec;
 
 /** Модель содержимого блока и его размещение через переопределяемые метрики. */
+@org.junit.jupiter.api.extension.ExtendWith(FontBackendForTests.class)
 public class TextBlockTest {
 
 	/** Блок с поддельными метриками: символ = 4px, шаг строки фиксированный. */

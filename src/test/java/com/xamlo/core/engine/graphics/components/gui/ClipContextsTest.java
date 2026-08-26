@@ -7,12 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import org.joml.Vector4f;
 import org.junit.jupiter.api.Test;
 
+import com.xamlo.core.engine.graphics.components.FontBackendForTests;
+
+
 import com.xamlo.core.engine.graphics.api.gui.IClippingElement;
 import com.xamlo.core.engine.graphics.api.gui.IResizable;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.elements.IWidget;
 
 /** Чистые расчёты ClipContexts без GL: эффективный клип-прямоугольник и перевод в NDC. */
+@org.junit.jupiter.api.extension.ExtendWith(FontBackendForTests.class)
 public class ClipContextsTest {
 
     /** Обычный Widget с включённым обрезанием потомков. */

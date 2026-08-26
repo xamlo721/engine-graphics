@@ -304,6 +304,10 @@ public class RenderEngine implements IRenderEngine {
 			@Override public void setString(String text) { Clipboard.setString(text); }
 			@Override public String getString() { return Clipboard.getString(); }
 		});
+		// Шов глифовых атласов: UI-слой строит их через фабрику графического бэкенда (mesh-pipeline остаётся здесь).
+		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setAtlasFactory(f -> new com.xamlo.core.engine.graphics.font.FontAtlas(f));
+		// Шов реестра шрифтов: UI виджеты получают лица через провайдер бэкенда вместо прямого вызова FontSystem.
+		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setFaceProvider(k -> com.xamlo.core.engine.graphics.fontsystem.FontSystem.getInstance().ensureFont(k));
 
 	    this.isRendering = true;
 

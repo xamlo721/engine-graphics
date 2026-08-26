@@ -40,6 +40,7 @@ import com.xamlo.engine.device.events.MouseClickEvent;
  * фокусируемым элементам в z-порядке с обходом на концах, Enter/NumpadEnter/Space
  * активируют элемент в фокусе ровно один раз за нажатие, ESC снимает фокус.
  */
+@org.junit.jupiter.api.extension.ExtendWith(FontBackendForTests.class)
 public class DefaultSceneControllerKeyboardTest {
 
     /** Сцена из плоского списка элементов, hit-test по containsPoint. */
