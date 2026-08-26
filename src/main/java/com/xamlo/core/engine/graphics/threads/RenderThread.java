@@ -14,10 +14,18 @@ import com.xamlo.core.engine.graphics.api.components.IRenderEngine;
 public class RenderThread extends Thread {
 
 	private IRenderEngine renderingEngine;
-	
+
 	private static final long NANOSECOND = 1000000000;
 	@SuppressWarnings("unused")
 	private static final long SECOND = 1;
+
+	// Явная просьба завершить цикл извне (без закрытия окна): выход по флагу на следующей итерации,
+	// после чего выполняются штатные stop()/release(). Позволяет приложению выйти без Runtime.halt.
+	private volatile boolean stopRequested = false;
+
+	public void requestStop() {
+		stopRequested = true;
+	}
 
     public RenderThread(IRenderEngine renderingEngine) {
         this.renderingEngine = renderingEngine;
@@ -54,7 +62,7 @@ public class RenderThread extends Thread {
 		//************************************//
 
 
-		while (renderingEngine.isRendering()) {
+		while (renderingEngine.isRendering() && !stopRequested) {
 
 			//Явная выдача событий ОС: без этого callback'и GLFW доставляются
 			//непредсказуемо, и при низком FPS нажатия теряются.
