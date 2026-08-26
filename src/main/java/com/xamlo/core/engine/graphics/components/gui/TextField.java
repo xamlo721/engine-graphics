@@ -12,7 +12,7 @@ import com.xamlo.core.engine.graphics.api.gui.font.IFont;
 import com.xamlo.core.engine.graphics.font.ApplicationFont;
 import com.xamlo.core.engine.graphics.font.UnicodeGlyphFont;
 import com.xamlo.core.engine.graphics.fontsystem.FontSystem;
-import com.xamlo.core.engine.graphics.devices.Clipboard;
+import com.xamlo.core.engine.graphics.api.gui.SystemClipboard;
 import com.xamlo.engine.api.devices.EnumKeyboardButtons;
 
 /**
@@ -427,12 +427,12 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
         switch (key) {
             case KEY_C:
                 if (hasSelection()) {
-                    Clipboard.setString(getSelectedText());
+                    SystemClipboard.setString(getSelectedText());
                 }
                 break;
             case KEY_X:
                 if (hasSelection()) {
-                    Clipboard.setString(getSelectedText());
+                    SystemClipboard.setString(getSelectedText());
                     deleteSelection();
                 }
                 break;
@@ -450,7 +450,7 @@ public class TextField extends Label implements ITextField, IKeyboardHandler, IF
 
     /** Вставляет содержимое буфера обмена в позицию caret (удаляя выделение). */
     private void pasteFromClipboard() {
-        String pasted = Clipboard.getString();
+        String pasted = SystemClipboard.getString();
         if (pasted == null || pasted.isEmpty()) {
             return;
         }

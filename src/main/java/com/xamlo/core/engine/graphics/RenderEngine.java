@@ -299,6 +299,11 @@ public class RenderEngine implements IRenderEngine {
 
 		// Клипборд: GLFW-вызовы выполняются на этом (рендер) потоке через очередь задач.
 		Clipboard.init(renderTaskQueue);
+		// Шов клипборда: UI-слой ходит через нейтральный SystemClipboard (регистрация GLFW-бэкенда здесь).
+		com.xamlo.core.engine.graphics.api.gui.SystemClipboard.register(new com.xamlo.core.engine.graphics.api.gui.ISystemClipboard() {
+			@Override public void setString(String text) { Clipboard.setString(text); }
+			@Override public String getString() { return Clipboard.getString(); }
+		});
 
 	    this.isRendering = true;
 
