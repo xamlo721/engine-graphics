@@ -148,6 +148,16 @@ public class RenderEngine implements IRenderEngine {
         
         projectionMatrix = projectionMatrix.mul(camera.getViewMatrix());
 
+
+
+		// Шов глифовых атласов: UI-слой строит их через фабрику графического бэкенда (mesh-pipeline остаётся здесь).
+		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setAtlasFactory(f -> new com.xamlo.core.engine.graphics.font.FontAtlas(f));
+		// Шов реестра шрифтов: UI виджеты получают лица через провайдер бэкенда вместо прямого вызова FontSystem.
+		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setFaceProvider(k -> com.xamlo.core.engine.graphics.fontsystem.FontSystem.getInstance().ensureFont(k));
+		// Шов растеризации глифов: UI не знает AWT-генератор — графический бэкенд подставляет свой при старте.
+		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setRasterizer((c, f, s, m, sp, aa) ->
+				com.xamlo.core.engine.graphics.fontsystem.GlyphGenerator.generateGlyph(c, f, s, m, sp, aa));
+
 	}
 	
 	@Override
@@ -296,14 +306,6 @@ public class RenderEngine implements IRenderEngine {
 		EventManager.register(MouseHoverEvent.class, sceneController);
 		EventManager.register(MouseDragAndropEvent.class, sceneController);
 		EventManager.register(WindowResizeEvent.class, sceneController);
-
-		// Шов глифовых атласов: UI-слой строит их через фабрику графического бэкенда (mesh-pipeline остаётся здесь).
-		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setAtlasFactory(f -> new com.xamlo.core.engine.graphics.font.FontAtlas(f));
-		// Шов реестра шрифтов: UI виджеты получают лица через провайдер бэкенда вместо прямого вызова FontSystem.
-		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setFaceProvider(k -> com.xamlo.core.engine.graphics.fontsystem.FontSystem.getInstance().ensureFont(k));
-		// Шов растеризации глифов: UI не знает AWT-генератор — графический бэкенд подставляет свой при старте.
-		com.xamlo.core.engine.graphics.font.UnicodeGlyphFont.setRasterizer((c, f, s, m, sp, aa) ->
-				com.xamlo.core.engine.graphics.fontsystem.GlyphGenerator.generateGlyph(c, f, s, m, sp, aa));
 
 		// Клипборд: GLFW-вызовы выполняются на этом (рендер) потоке через очередь задач.
 		Clipboard.init(renderTaskQueue);
