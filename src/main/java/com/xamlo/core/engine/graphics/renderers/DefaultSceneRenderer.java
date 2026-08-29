@@ -1,12 +1,17 @@
 package com.xamlo.core.engine.graphics.renderers;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
+import static org.lwjgl.opengl.GL11.glDepthMask;
+
+import org.joml.Matrix4f;
 
 import com.xamlo.core.engine.graphics.api.components.IScene;
 import com.xamlo.core.engine.graphics.api.components.ISceneRenderer;
 import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
 import com.xamlo.core.engine.graphics.api.gui.ZOrder;
+import com.xamlo.core.engine.graphics.components.ChunkMeshElement;
+import com.xamlo.core.engine.graphics.components.Frustum;
 import com.xamlo.core.engine.graphics.opengl.blend.EnumOpenglBlendMode;
 import com.xamlo.core.engine.graphics.opengl.blend.OpenGLBlend;
 import com.xamlo.core.engine.graphics.opengl.depth.EnumOpenGLDepthMode;
@@ -64,13 +69,37 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		
 	}
 	
+	/**
+	 * Кадр сцены: мир (включая {@link ChunkMeshElement}) рисуется под реальным depth-test'ом
+	 * LESS с записью глубины; после обоих GUI-циклов состояние возвращается ровно к тому,
+	 * что оставляет init() сегодня (тест включён, func ALWAYS, mask true). Frustum строится
+	 * один раз из матрицы сцены (RenderEngine.transformScene кладёт туда projection*view),
+	 * и чанки без зарегистрированного AABB либо вышедшие за него пропускаются целиком.
+	 */
 	@Override
 	public void renderScene(IScene scene) {
-        
-		for (AbstractSceneElement obj : scene.getRenderableObject()) {
-			elementRenderer.draw(obj, scene);
+
+		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.LESS);
+		glDepthMask(true);
+
+		Frustum frustum = null;
+		Matrix4f mvp = scene == null ? null : scene.getProjectionMatrix();
+		if (mvp != null) {
+			frustum = Frustum.getFrustum();
+			frustum.calculateFrustum(mvp);
 		}
-		
+
+		for (AbstractSceneElement obj : scene.getRenderableObject()) {
+			if (obj instanceof ChunkMeshElement chunk) {
+				if (!chunkInView(chunk, frustum)) {
+					continue;
+				}
+				chunk.draw(scene);
+			} else {
+				elementRenderer.draw(obj, scene);
+			}
+		}
+
 		// Отрисовка в z-порядке: элементы с большим индексом слоя поверх остальных,
 		// при равных — в порядке дерева.
 		for (IUIElement element : ZOrder.sorted(scene.getGuiElements())) {
@@ -78,8 +107,31 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			textRenderer.draw(element, scene);
 		}
 
+		// Точно то состояние глубины, которое init() задаёт на старте кадра сегодня
+		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
+		glDepthMask(true);
+
 	}
-	
+
+	/**
+	 * Culling чанка по его AABB: {@link ChunkMeshElement#registerChunkBox(int, int, int, int)}
+	 * хранит CORNER-BASED координату нижнего блока + размер, Frustum.cubeInFrustum ждёт
+	 * центр+half-size — переводим перед вызовом. Без MVP или без зарегистрированного ящика
+	 * каллинг не применяется и элемент рисуется как раньше. Для нечётного размера тестовый
+	 * ящик ужимается максимум на блок по оси; типовые 16-блочные чанки точны.
+	 */
+	private static boolean chunkInView(ChunkMeshElement chunk, Frustum frustum) {
+		if (frustum == null || !chunk.hasChunkBounds()) {
+			return true;
+		}
+		int size = chunk.getChunkSize();
+		return frustum.cubeInFrustum(
+				chunk.getChunkMinX() + size / 2,
+				chunk.getChunkMinY() + size / 2,
+				chunk.getChunkMinZ() + size / 2,
+				size / 2);
+	}
+
 
 	@Override
 	public void cleanup() {
