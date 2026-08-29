@@ -562,6 +562,9 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	@EventTarget(noParamEvents = MouseDragAndropEvent.class)
 	public void onMouseDragAndDropEvent(final MouseDragAndropEvent event) {
+		// TEMP-DIAG(scene-drag): remove together with downstream slider investigation
+		System.out.println("[engine-diag] scene-drag phase=" + event.getPhase()
+				+ " draggingEl=" + this.draggingElement);
 		// E9: курсор приходит физическими пикселями — один раз переводим в пространство активной сетки.
 		float ux = this.toDesignX(event.getxPos());
 		float uy = this.toDesignY(event.getyPos());
@@ -582,6 +585,7 @@ public class DefaultSceneController implements ISceneController {
 				} else {
 					this.draggingElement = null;
 				}
+				System.out.println("[engine-diag] scene-start found=" + (found == null ? "null" : found.getClass().getSimpleName()) + " draggable=" + (found instanceof IDraggable) + " lstNull=" + ((found instanceof IDraggable) && (((IDraggable) found).getDragListener() == null)) + " nowDragging=" + this.draggingElement);
 				break;
 			}
 
