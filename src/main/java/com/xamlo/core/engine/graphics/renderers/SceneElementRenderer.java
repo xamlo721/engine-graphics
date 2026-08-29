@@ -44,17 +44,14 @@ public class SceneElementRenderer {
 		
 		obj.getMesh().bind();
 
-	    // Draw the vertices
-	    GL11.glDrawArrays(GL_TRIANGLES, 0, obj.getMesh().getVertexCount());
-		
-		/**
-		 * mode: Задает примитивы для рендеринга, в данном случае треугольники. Здесь никаких изменений.
-		 * count: Указывает количество элементов, которые должны быть отрисованы.
-		 * type: Указывает тип значения в данных индексов. В данном случае мы используем целые числа.
-		 * indices: Задает смещение, которое необходимо применить к данным индексов для начала рендеринга.
-		 */
-		glDrawElements(GL_TRIANGLES, obj.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
-		
+	    // Один проход на кадр: индексный draw, если меш собран с индексами,
+	    // иначе обычный glDrawArrays (раньше оба вызова шли подряд — двойная отрисовка).
+	    if (obj.getMesh().hasIndices()) {
+	        glDrawElements(GL_TRIANGLES, obj.getMesh().getIndexCount(), GL_UNSIGNED_INT, 0);
+	    } else {
+	        GL11.glDrawArrays(GL_TRIANGLES, 0, obj.getMesh().getVertexCount());
+	    }
+
 		// На самом деле разбинживать меш вовсе не обязательно, но я так хочу
 		obj.getMesh().unbind();
 

@@ -62,6 +62,19 @@ public class GraphicalMesh extends PhysicalMesh implements IGraphicalMesh {
         //this.verticesCount = indices.length;
     }
     
+    /** Есть ли у меши индексный буфер (меш собран с индексами граней). */
+    public boolean hasIndices() {
+        return vao != null && vao.hasIndexData();
+    }
+
+    /** Число индексов, если меш собран с индексами, иначе -1. */
+    public int getIndexCount() {
+        if (vao == null) {
+            return -1;
+        }
+        return vao.getIndexCount();
+    }
+
     @Override
 	public void bind() {
     	vao.bind();
