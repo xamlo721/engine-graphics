@@ -70,35 +70,38 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 	}
 	
 	/**
-	 * Кадр сцены: мир (включая {@link ChunkMeshElement}) рисуется под реальным depth-test'ом
-	 * LESS с записью глубины; после обоих GUI-циклов состояние возвращается ровно к тому,
-	 * что оставляет init() сегодня (тест включён, func ALWAYS, mask true). Frustum строится
-	 * один раз из матрицы сцены (RenderEngine.transformScene кладёт туда projection*view),
-	 * и чанки без зарегистрированного AABB либо вышедшие за него пропускаются целиком.
+	 * Кадр сцены = упорядоченный список проходов, каждый из которых сам декларирует свои
+	 * требования к состоянию GPU и обязан вернуть его точно до начала следующего прохода
+	 * (см. {@link #init()}: blend SRC_ALPHA/ONE_MINUS_SRC_ALPHA, depth-test включён, func ALWAYS):
+	 * <ol>
+	 *   <li>{@code opaque-world} — объекты сцены, включая {@link ChunkMeshElement}, под LESS + mask(true);</li>
+	 *   <li>{@code gui} — z-циклы по виджетам/тексту в стейди-стейте init(), который world-pass восстанавливает.</li>
+	 * </ol>
+	 * При нуле чанков GL-состояние за кадр побайтово совпадает со старым поведением метода.
+	 * TODO: frustum-culling чанков по AABB добавить, когда IScene будет отдавать полный MVP
+	 *       (сейчас доступен только getProjectionMatrix()); визуальная приёмка pass-plan'а на
+	 *       реальных данных чанков — после появления сетевого подключения.
 	 */
 	@Override
 	public void renderScene(IScene scene) {
 
-		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.LESS);
-		glDepthMask(true);
-
-		Frustum frustum = null;
-		Matrix4f mvp = scene == null ? null : scene.getProjectionMatrix();
-		if (mvp != null) {
-			frustum = Frustum.getFrustum();
-			frustum.calculateFrustum(mvp);
-		}
-
 		for (AbstractSceneElement obj : scene.getRenderableObject()) {
-			if (obj instanceof ChunkMeshElement chunk) {
-				if (!chunkInView(chunk, frustum)) {
-					continue;
-				}
-				chunk.draw(scene);
-			} else {
+			if (!(obj instanceof ChunkMeshElement)) {
 				elementRenderer.draw(obj, scene);
 			}
 		}
+
+		// Проход "opaque-world": реальный depth-test только вокруг 3D-контента.
+		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.LESS);
+		glDepthMask(true);
+		for (AbstractSceneElement obj : scene.getRenderableObject()) {
+			if (obj instanceof ChunkMeshElement chunk) {
+				chunk.draw(scene);
+			}
+		}
+		// Точный возврат стейди-стейта init() до отрисовки GUI.
+		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
+		glDepthMask(true);
 
 		// Отрисовка в z-порядке: элементы с большим индексом слоя поверх остальных,
 		// при равных — в порядке дерева.
@@ -106,10 +109,6 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 			uiRenderer.draw(element, scene);
 			textRenderer.draw(element, scene);
 		}
-
-		// Точно то состояние глубины, которое init() задаёт на старте кадра сегодня
-		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
-		glDepthMask(true);
 
 	}
 
