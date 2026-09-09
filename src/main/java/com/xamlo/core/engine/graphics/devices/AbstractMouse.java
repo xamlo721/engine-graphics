@@ -81,6 +81,18 @@ public abstract class AbstractMouse implements IMouse, IUpdatableDevice {
 		this.previousCursorPosition = lockedCursorPosition;
 	}
 
+	/** Включён ли захват курсора (raw/deltas режим боевого шутера). Реализация по умолчанию — обычный флаг;
+	 *  нативная реализация (LJWGLMouse) переключает GLFW_CURSOR_DISABLED. */
+	public void setCaptureEnabled(boolean captureEnabled) {
+		this.captureEnabled = captureEnabled;
+	}
+
+	public boolean isCaptureEnabled() {
+		return captureEnabled;
+	}
+
+	private boolean captureEnabled;
+
 	@Override
 	public Vector2f getScrollDelta() {
 		// Защитная копия: callback'и GLFW могут накапливать параллельно со снимком.

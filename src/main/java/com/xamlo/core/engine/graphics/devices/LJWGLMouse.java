@@ -1,8 +1,12 @@
 package com.xamlo.core.engine.graphics.devices;
 
 
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_DISABLED;
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 import static org.lwjgl.glfw.GLFW.glfwSetCursorPos;
 import static org.lwjgl.glfw.GLFW.glfwSetCursorPosCallback;
+import static org.lwjgl.glfw.GLFW.glfwSetInputMode;
 import static org.lwjgl.glfw.GLFW.glfwSetMouseButtonCallback;
 import static org.lwjgl.glfw.GLFW.glfwSetScrollCallback;
 
@@ -40,7 +44,30 @@ public class LJWGLMouse extends AbstractMouse {
 		glfwSetScrollCallback(windowHandle, scrollCb);
 
 	}
-	
+
+	/** GLFW-зависимый захват: DISABLED отдаёт raw-движение, NORMAL возвращает видимый курсор в центр окна. */
+	@Override
+	public void setCaptureEnabled(boolean captureEnabled) {
+		boolean changed = captureEnabled != isCaptureEnabled();
+		super.setCaptureEnabled(captureEnabled);
+		if (changed) {
+			applyCursorMode();
+			// Не даём первому смещению после переключения превратиться в рывок камеры.
+			previousCursorPosition.set(cursorPosition);
+			cursorPositionDiff.set(0f, 0f);
+			if (!captureEnabled) {
+				// vanilla-семантика ungrabMouseCursor: курсор возвращается в центр окна.
+				LJWGLWindow window = LJWGLWindow.getInstance();
+				glfwSetCursorPos(window.getWindow(), window.getWidth() * 0.5d, window.getHeight() * 0.5d);
+			}
+		}
+	}
+
+	private void applyCursorMode() {
+		glfwSetInputMode(LJWGLWindow.getInstance().getWindow(), GLFW_CURSOR,
+				isCaptureEnabled() ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+	}
+
 	@Override
 	public void update() {
 		

@@ -91,6 +91,12 @@ public class LJWGLWindow extends AbstractWindow {
 	}
 
 	@Override
+	public void setVsyncEnabled(boolean enabled) {
+		super.setVsyncEnabled(enabled);
+		glfwSwapInterval(enabled ? 1 : 0);
+	}
+
+	@Override
 	public void swapBuffers() {
 		glfwSwapBuffers(window);
 	}

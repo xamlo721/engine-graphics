@@ -11,6 +11,16 @@ public abstract class AbstractWindow implements IWindow, IUpdatableDevice {
 	protected long window;
 	protected int width;
 	protected int height;
+	protected boolean vsyncEnabled = true;
+
+	/** Переключатель вертикальной синхронизации (GLFW swap interval); по умолчанию включена. */
+	public void setVsyncEnabled(boolean enabled) {
+		this.vsyncEnabled = enabled;
+	}
+
+	public boolean isVsyncEnabled() {
+		return vsyncEnabled;
+	}
 	
 	@Override
 	public int getWidth() {

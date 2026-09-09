@@ -197,6 +197,15 @@ public class RenderEngine implements IRenderEngine {
 		sceneController.setKeyboard(keyboard);
 	}
 
+	/** Окно и устройства ввода создаются в loadInputDevices() (перед первым кадром); мост для порта vanilla-кода. */
+	public AbstractMouse getMouse() {
+		return mouse;
+	}
+
+	public AbstractKeyboard getKeyboard() {
+		return keyboard;
+	}
+
 	@Override
 	public void stop() {
 		
