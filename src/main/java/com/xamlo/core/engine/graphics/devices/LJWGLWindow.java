@@ -29,10 +29,9 @@ public class LJWGLWindow extends AbstractWindow {
         glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
         
 		//Установка минимальных версий OpenGL 3.3
-		//Если требуемая минимальная версия не поддерживается на компьютере, создание контекста (и окна) завершается ошибкой
+		//Если требуемая минимальная версия не поддерживается на компьютере, создание контекста (и окна) завершится ошибкой
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);	
-		//Установка профайла для которого создается контекст
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);	
 		
 		//Включение возможности изменения размера окна
