@@ -32,7 +32,15 @@ public class LJWGLWindow extends AbstractWindow {
 		//Если требуемая минимальная версия не поддерживается на компьютере, создание контекста (и окна) завершится ошибкой
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);	
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);	
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);		
+		// Явный выбор бэкенда вместо автодетекта GLFW: в процессах с заранее загруженными нативными библиотеками
+		// автоматический подбор платформы может выбрать нерабочий вариант, хотя каждый бэкенд сам по себе цел.
+		String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
+		int platform = (waylandDisplay != null && !waylandDisplay.isEmpty()) ? GLFW_PLATFORM_WAYLAND : GLFW_PLATFORM_X11;
+		if (!"Linux".equals(System.getProperty("os.name"))) {
+			platform = GLFW_ANY_PLATFORM; // win32/cocoa: автоподбор корректен и единственен
+		}
+		glfwWindowHint(GLFW_PLATFORM, platform);	
 		
 		//Включение возможности изменения размера окна
 		glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);	
