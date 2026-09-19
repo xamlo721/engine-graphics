@@ -53,7 +53,36 @@ public class LJWGLWindow extends AbstractWindow {
 			System.err.println("[MCP-WIN] re-init result=" + ok);
 		}
 
-		window = glfwCreateWindow(width, height, "base window title", 0, 0);
+        // Placement: find a monitor whose workarea fits the requested size (the primary handle can be NULL under some compositors),
+        // then center inside its workarea so multi-head setups do not reject large windows placed at (0,0) of another head.
+        int winX = 0;
+        int winY = 0;
+        java.nio.IntBuffer waX = java.nio.IntBuffer.allocate(1);
+        java.nio.IntBuffer waY = java.nio.IntBuffer.allocate(1);
+        java.nio.IntBuffer waW = java.nio.IntBuffer.allocate(1);
+        java.nio.IntBuffer waH = java.nio.IntBuffer.allocate(1);
+        long monHandle = glfwGetPrimaryMonitor();
+        if (monHandle == 0L || !workAreaFits(monHandle, width, height, waX, waY, waW, waH)) {
+            org.lwjgl.PointerBuffer mons = glfwGetMonitors(); // can be NULL on hosts without detectable monitors
+            int monCount = mons == null ? 0 : mons.capacity();
+            for (int i = 0; i < monCount; ++i) {
+                long m = mons.get(i);
+                if (m == 0L) continue;
+                if (workAreaFits(m, width, height, waX, waY, waW, waH)) {
+                    monHandle = m;
+                    break;
+                } else if (monHandle == 0L) {
+                    monHandle = m; // remember the largest-candidate seen so far as a placement anchor
+                }
+            }
+        }
+        if (monHandle != 0L && workAreaFits(monHandle, width, height, waX, waY, waW, waH)) {
+            winX = Math.max(waX.get(0), waX.get(0) + (waW.get(0) - width) / 2);
+            winY = Math.max(waY.get(0), waY.get(0) + (waH.get(0) - height) / 2);
+        }
+        System.err.println("[window] placing " + width + "x" + height + " at (" + winX + "," + winY + ") monitor=" + (monHandle == 0L ? "none" : Long.toString(monHandle)));
+
+		window = glfwCreateWindow(width, height, "base window title", winX, winY);
 		
 		if(window == 0) {
 			System.err.println("[window] first create failed at "+width+"x"+height+", retrying after full attribute reset");
@@ -62,17 +91,14 @@ public class LJWGLWindow extends AbstractWindow {
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			glfwWindowHint(GLFW_PLATFORM, platform);
-			window = glfwCreateWindow(width, height, "base window title", 0, 0);
+			window = glfwCreateWindow(width, height, "base window title", winX, winY);
 		}
 
-        // Robust fallback: some host environments reject the initial hint set but accept the minimal one;
-        // probe-style retries (same recipe as the diagnostic below) have been observed to succeed where the
-        // primary attempts return NULL. Give it a few chances before giving up.
+        // Robust fallback: keep trying the requested size with alternating hint variants; heal libglfw in place once plain
+        // retries are exhausted. Probe-sized geometry is only a last resort so the UI canvas keeps its real dimensions.
 		int attempt = 0;
-		while (window == 0 && ++attempt <= 6) {
+		while (window == 0 && ++attempt <= 8) {
 			try { Thread.sleep(250); } catch (InterruptedException ignore) {}
-            // After the plain retries are exhausted, heal in place: some host environments leave libglfw
-            // half-initialized by earlier native loads; only terminate+init restores create capability.
 			if (attempt == 4) {
 				System.err.println("[window] plain retries exhausted, forcing glfwTerminate+glfwInit");
 				try { glfwTerminate(); } catch (Throwable t) {}
@@ -81,26 +107,27 @@ public class LJWGLWindow extends AbstractWindow {
 			}
 			glfwDefaultWindowHints();
 			glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 			if ((attempt & 1) != 0) {
-				// Odd attempts mirror the diagnostic probe exactly (major-only version hint): some drivers reject an explicit core-profile pair but accept major only.
-				glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 				glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			} else {
-				glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 				glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 				glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			}
 			glfwWindowHint(GLFW_PLATFORM, platform);
-            int w = ((attempt & 1) != 0) ? width : 640; // alternate requested vs probe-size geometry
-            int h = ((attempt & 1) != 0) ? height : 480;
-			long candidate = glfwCreateWindow(w, h, "base window title", 0L, 0L);
+            int w = (attempt > 6) ? Math.min(width, 640) : width; // probe-sized geometry only as the very last resort
+            int h = (attempt > 6) ? Math.min(height, 480) : height;
+			long candidate = glfwCreateWindow(w, h, "base window title", winX, winY);
 			if (candidate == 0L) {
 				System.err.println("[window] retry #" + attempt + " (" + w + "x" + h + ") failed");
 			} else {
-				System.err.println("[window] recovered on retry #" + attempt);
+				System.err.println("[window] recovered on retry #" + attempt + " at " + w + "x" + h);
 				window = candidate;
 			}
 		}
+
+
+
 
 		//[M1-DIAG TEMPORARY] per-platform probe inside failing process — remove once root cause found
 		if(window == 0 && Boolean.getBoolean("mcport.windowProbe")) {
@@ -146,6 +173,12 @@ public class LJWGLWindow extends AbstractWindow {
 		glfwSetFramebufferSizeCallback(LJWGLWindow.getInstance().getWindow(), new WindowCallback());
 
 	}
+
+	private static boolean workAreaFits(long monitor, int needW, int needH, java.nio.IntBuffer outX, java.nio.IntBuffer outY, java.nio.IntBuffer outW, java.nio.IntBuffer outH) {
+		glfwGetMonitorWorkarea(monitor, outX, outY, outW, outH);
+		return outW.get(0) >= needW && outH.get(0) >= needH;
+	}
+
 
 	@Override
 	public void update() {
