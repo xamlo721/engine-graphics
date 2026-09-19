@@ -36,7 +36,8 @@ public class FontAtlas implements IFontAtlas {
 	public FontAtlas(UnicodeGlyphFont font) {
 		this.fontSource = font;
 		this.glyphModels = new HashMap<Character, GraphicalMesh>();
-		this.generateAtlasModels(font);
+        // Glyph meshes are built lazily in getGlyphMesh (was: eager generateAtlasModels here —
+        // the up-front rasterize/upload burst destabilized host GPU drivers under embedded launchers).
 	}
 
 	@Override
