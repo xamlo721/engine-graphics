@@ -36,12 +36,13 @@ public class LJWGLWindow extends AbstractWindow {
 		// Явный выбор бэкенда вместо автодетекта GLFW: в процессах с заранее загруженными нативными библиотеками
 		// автоматический подбор платформы может выбрать нерабочий вариант, хотя каждый бэкенд сам по себе цел.
 		String display = System.getenv("DISPLAY");
-		int platform = (display != null && !display.isEmpty()) ? GLFW_PLATFORM_X11 : GLFW_PLATFORM_WAYLAND;
-		if (!"Linux".equals(System.getProperty("os.name"))) {
-			platform = GLFW_ANY_PLATFORM; // win32/cocoa: автоподбор корректен и единственен
+		boolean x11Host = "Linux".equals(System.getProperty("os.name")) && display != null && !display.isEmpty();
+		if ("Linux".equals(System.getProperty("os.name"))) {
+			// Платформенный hint существует только для X11-бэкенда; на Wayland это невалидный enum.
+			glfwWindowHint(GLFW_PLATFORM, x11Host ? GLFW_PLATFORM_X11 : GLFW_PLATFORM_WAYLAND);
 		}
-		glfwWindowHint(GLFW_PLATFORM, platform);	
-		
+
+
 		//Включение возможности изменения размера окна
 		glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);	
 		
@@ -61,26 +62,33 @@ public class LJWGLWindow extends AbstractWindow {
         java.nio.IntBuffer waY = java.nio.IntBuffer.allocate(1);
         java.nio.IntBuffer waW = java.nio.IntBuffer.allocate(1);
         java.nio.IntBuffer waH = java.nio.IntBuffer.allocate(1);
-        long monHandle = glfwGetPrimaryMonitor();
-        if (monHandle == 0L || !workAreaFits(monHandle, width, height, waX, waY, waW, waH)) {
-            org.lwjgl.PointerBuffer mons = glfwGetMonitors(); // can be NULL on hosts without detectable monitors
-            int monCount = mons == null ? 0 : mons.capacity();
-            for (int i = 0; i < monCount; ++i) {
-                long m = mons.get(i);
-                if (m == 0L) continue;
-                if (workAreaFits(m, width, height, waX, waY, waW, waH)) {
-                    monHandle = m;
-                    break;
-                } else if (monHandle == 0L) {
-                    monHandle = m; // remember the largest-candidate seen so far as a placement anchor
+        // Probe monitors only on explicit request: under some compositors the cached handle table goes stale and
+        // native dereference inside glfw*MonitorWorkarea crashes hard; plain (0,0) placement is compositor-safe.
+        boolean probeMonitors = "true".equals(System.getProperty("mcport.probeMonitors"));
+        if (x11Host && probeMonitors) {
+            long monHandle = glfwGetPrimaryMonitor();
+            if (monHandle == 0L || !workAreaFits(monHandle, width, height, waX, waY, waW, waH)) {
+                org.lwjgl.PointerBuffer mons = glfwGetMonitors(); // can be NULL on hosts without detectable monitors
+                int monCount = mons == null ? 0 : mons.capacity();
+                for (int i = 0; i < monCount; ++i) {
+                    long m = mons.get(i);
+                    if (m == 0L) continue;
+                    if (workAreaFits(m, width, height, waX, waY, waW, waH)) {
+                        monHandle = m;
+                        break;
+                    } else if (monHandle == 0L) {
+                        monHandle = m; // remember the largest-candidate seen so far as a placement anchor
+                    }
                 }
             }
+            if (monHandle != 0L && workAreaFits(monHandle, width, height, waX, waY, waW, waH)) {
+                winX = Math.max(waX.get(0), waX.get(0) + (waW.get(0) - width) / 2);
+                winY = Math.max(waY.get(0), waY.get(0) + (waH.get(0) - height) / 2);
+            }
+            System.err.println("[window] placing " + width + "x" + height + " at (" + winX + "," + winY + ") monitor=" + (monHandle == 0L ? "none" : Long.toString(monHandle)));
+        } else {
+            System.err.println("[window] placement delegated to compositor (backend=" + (x11Host ? "x11" : "wayland") + ", probeMonitors=" + probeMonitors + ")");
         }
-        if (monHandle != 0L && workAreaFits(monHandle, width, height, waX, waY, waW, waH)) {
-            winX = Math.max(waX.get(0), waX.get(0) + (waW.get(0) - width) / 2);
-            winY = Math.max(waY.get(0), waY.get(0) + (waH.get(0) - height) / 2);
-        }
-        System.err.println("[window] placing " + width + "x" + height + " at (" + winX + "," + winY + ") monitor=" + (monHandle == 0L ? "none" : Long.toString(monHandle)));
 
 		window = glfwCreateWindow(width, height, "base window title", winX, winY);
 		
@@ -90,7 +98,8 @@ public class LJWGLWindow extends AbstractWindow {
 			glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-			glfwWindowHint(GLFW_PLATFORM, platform);
+			{ int p2 = "Linux".equals(System.getProperty("os.name")) ? (x11Host ? GLFW_PLATFORM_X11 : GLFW_PLATFORM_WAYLAND) : GLFW_ANY_PLATFORM;
+			glfwWindowHint(GLFW_PLATFORM, p2); }
 			window = glfwCreateWindow(width, height, "base window title", winX, winY);
 		}
 
@@ -114,7 +123,8 @@ public class LJWGLWindow extends AbstractWindow {
 				glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 				glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			}
-			glfwWindowHint(GLFW_PLATFORM, platform);
+			{ int p2 = "Linux".equals(System.getProperty("os.name")) ? (x11Host ? GLFW_PLATFORM_X11 : GLFW_PLATFORM_WAYLAND) : GLFW_ANY_PLATFORM;
+			glfwWindowHint(GLFW_PLATFORM, p2); }
             int w = (attempt > 6) ? Math.min(width, 640) : width; // probe-sized geometry only as the very last resort
             int h = (attempt > 6) ? Math.min(height, 480) : height;
 			long candidate = glfwCreateWindow(w, h, "base window title", winX, winY);
@@ -182,18 +192,34 @@ public class LJWGLWindow extends AbstractWindow {
 
 	@Override
 	public void update() {
-		// glfwPollEvents() здесь был убран намеренно: RenderThread уже качает события
-		// в начале каждой итерации ДО снимка ввода (updateInputDevices). Пул между
-		// построением снимка и очисткой накопленных списков devices создавал «мёртвую зону»:
-		// каждое нажатие доставлялось сюда, попадало в pushed/released после копия и
-		// стиралось тем же циклом, так что edge'и никогда не попадали ни в один кадр.
+	// В архитектуре движка события качает RenderThread до снимка ввода; хосты без отдельного
+	// рендер-потока (единый клиентский цикл) обязаны вызывать этот метод раз в кадр — иначе GLFW
+	// накапливает нативные события и колбэки устройств их никогда не получат.
+	if (window != 0L)
+	{
+		glfwPollEvents();
+	}
 	}
 	
 	@Override
 	public void setWindowTitle(String title) {
 		glfwSetWindowTitle(window, title);
 	}
-	
+
+	/**
+	 * Гарантирует привязку контекста окна к текущему потоку перед GL-вызовами хоста.
+	 * Контекст остаётся текущим до уничтожения окна или переключения на другой; внешние
+	 * события (пересоздание композитором X-окна, glfwTerminate в self-heal цикле) могут
+	 * потерять эту привязку без уведомления — повторный makeCurrent идемпотентен и дёшев.
+	 */
+	public void ensureContext() {
+		if (window != 0L && org.lwjgl.glfw.GLFW.glfwGetCurrentContext() == window) return;
+		if (window == 0L) return;
+		glfwMakeContextCurrent(window);
+		GL.createCapabilities();
+	}
+
+
 	@Override
 	public void setWindowIcon(GLFWImage icon) {
 		GLFWImage.Buffer images = GLFWImage.malloc(1);

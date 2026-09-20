@@ -11,6 +11,8 @@ uniform bool useTextColor;
 uniform vec4 textColor;
 uniform vec4 hoverColor;
 uniform float hoverIntensity;
+uniform vec4 pressedColor;
+uniform float pressedIntensity;
 uniform vec4 backgroundColor;
 
 // Клиппинг по прямоугольнику предка-клипера в NDC координатах всего окна
@@ -36,4 +38,5 @@ void main() {
     }
 
     outColor = mix(baseColor, hoverColor, hoverIntensity);
+    outColor = mix(outColor, pressedColor, pressedIntensity);
 }

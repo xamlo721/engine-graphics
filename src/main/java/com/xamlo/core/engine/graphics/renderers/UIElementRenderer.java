@@ -162,6 +162,16 @@ public class UIElementRenderer {
             debugUIElement.getShader().setUniform("hoverIntensity", 0.0f);
         }
         
+        // Pressed state for push buttons mirrors the hover slot: tint with its own color when setPressed(true).
+        if (element instanceof com.xamlo.core.engine.graphics.api.gui.elements.IPushButton pb && pb.isPressed()) {
+            IColor pressedColorIface = pb.getButtonPressedColor();
+            debugUIElement.getShader().setUniform("pressedColor", pressedColorIface != null ? pressedColorIface.getColorVector() : new Vector4f(0, 0, 0, 0));
+            debugUIElement.getShader().setUniform("pressedIntensity", 0.35f);
+        } else {
+            debugUIElement.getShader().setUniform("pressedColor", new Vector4f(0, 0, 0, 0));
+            debugUIElement.getShader().setUniform("pressedIntensity", 0.0f);
+        }
+        
 		debugUIElement.getMesh().bind();
 
 		if (texture != null) {
