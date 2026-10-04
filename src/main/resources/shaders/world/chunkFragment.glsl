@@ -19,7 +19,13 @@ uniform vec3 uFogCenter;
 void main() {
 	vec4 base;
 #ifdef USE_TEXTURE
-	base = texture(texture_sampler, vUv);
+	vec4 texSampled = texture(texture_sampler, vUv);
+	if (texSampled.a < 0.5) {
+		discard; // vanilla-style alpha test for cutout art (plants/glass): true silhouettes without an extra blend pass
+	}
+	// Textured quads still modulate by the baked per-face color: this carries face brightness and runtime tints
+	// (e.g. vanilla foliage colormap) exactly like legacy fixed-function multiply-blending did.
+	base = vec4(texSampled.rgb * vColor.rgb, 1.0) * vColor.a;
 #else
 	base = vColor;
 #endif
