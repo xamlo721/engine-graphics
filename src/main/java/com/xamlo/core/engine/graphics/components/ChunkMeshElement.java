@@ -100,7 +100,8 @@ public class ChunkMeshElement extends AbstractSceneElement {
 
     // AABB чанка для frustum-culling в DefaultSceneRenderer: CORNER-BASED — координата
     // нижнего блока + размер по каждой оси в блоках (типовой MC-чанк: size=16).
-    private volatile int chunkMinX, chunkMinY, chunkMinZ, chunkSize;
+    private volatile int chunkMinX, chunkMinY, chunkMinZ;
+    private volatile int chunkSx = 16, chunkSy = 16, chunkSz = 16;
     private volatile boolean hasChunkBounds;
 
     // Снимок данных для асинхронной загрузки (updateLocal копирует массивы сразу)
@@ -330,10 +331,23 @@ public class ChunkMeshElement extends AbstractSceneElement {
      * без каллинга. Любой поток.
      */
     public void registerChunkBox(int minX, int minY, int minZ, int size) {
+        this.registerChunkBox(minX, minY, minZ, size, size, size);
+    }
+
+    /**
+     * Axis-exact variant of {@link #registerChunkBox(int, int, int, int)} for non-uniform slabs
+     * (e.g. a fixed X/Z footprint with an independent vertical extent). Same corner-based semantics.
+     */
+    public void registerChunkBox(int minX, int minY, int minZ, int sx, int sy, int sz) {
+        if (sx <= 0 || sy <= 0 || sz <= 0) {
+            return;
+        }
         this.chunkMinX = minX;
         this.chunkMinY = minY;
         this.chunkMinZ = minZ;
-        this.chunkSize = size;
+        this.chunkSx = sx;
+        this.chunkSy = sy;
+        this.chunkSz = sz;
         this.hasChunkBounds = true;
     }
 
@@ -353,8 +367,21 @@ public class ChunkMeshElement extends AbstractSceneElement {
         return chunkMinZ;
     }
 
+    public int getChunkSX() {
+        return chunkSx;
+    }
+
+    public int getChunkSY() {
+        return chunkSy;
+    }
+
+    public int getChunkSZ() {
+        return chunkSz;
+    }
+
+    /** Legacy uniform-size view of the culling box (conservative superset over all axes). */
     public int getChunkSize() {
-        return chunkSize;
+        return Math.max(chunkSx, Math.max(chunkSy, chunkSz));
     }
 
     // ------------------------------------------------------------------ отрисовка
