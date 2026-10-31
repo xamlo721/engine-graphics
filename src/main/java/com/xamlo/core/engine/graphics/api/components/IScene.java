@@ -6,6 +6,7 @@ import org.joml.Matrix4f;
 
 import com.xamlo.core.engine.graphics.api.gui.AbstractSceneElement;
 import com.xamlo.core.engine.graphics.api.gui.IUIElement;
+import com.xamlo.core.engine.graphics.components.Frustum;
 
 /*
  * Интерфейс, описывающий правила в заимодействия с понятием "Сцена"
@@ -39,9 +40,33 @@ public interface IScene {
 	//TODO: Есть мнение, что сцена это совокупность объектов, которую могут рисовать
 	// всякие Renderer, они и определяют её положение в мире, а она сама не знает где она расположена
 	// Пока не уверен как правильно - сделаем World + несколько Renderer, тогда и разберемся
+	/**
+	 * Матрица кадра, поставленная через {@link #setProjectionMatrix(Matrix4f)}, возвращается как есть.
+	 * Контракт сцены: в этом слоте лежит финальный world→clip преобразователь, который рендер-поток
+	 * применяет к вершинам всех отрисовываемых элементов (обычно готовая композиция projection×view),
+	 * поэтому запросы видимости ({@link #getViewFrustum()}) выводятся ровно оттуда — culling всегда
+	 * согласован с тем, что реально уходит на GPU. Null до первого вызова setProjectionMatrix.
+	 */
 	Matrix4f getProjectionMatrix();
-	
+
+	/** Хранит финальный world→clip преобразователь кадра; см. {@link #getProjectionMatrix()}. */
 	void setProjectionMatrix(Matrix4f transformMatrix);
+
+	/**
+	 * Готовый объём видимости текущего кадра (frustum) по сохранённому
+	 * {@link #getProjectionMatrix()} для culling статической геометрии против того же вида,
+	 * который использует renderer сцены. Плоскостные тесты AABB/сферы — у {@link Frustum}.
+	 * Stateless: свежий экземпляр на каждый вызов; null, если матрица ещё не была поставлена.
+	 */
+	default Frustum getViewFrustum() {
+	    Matrix4f clip = getProjectionMatrix();
+	    if (clip == null) {
+	        return null;
+	    }
+	    Frustum volume = new Frustum();
+	    volume.calculateFrustum(clip);
+	    return volume;
+	}
 	
 	void unload();
 	

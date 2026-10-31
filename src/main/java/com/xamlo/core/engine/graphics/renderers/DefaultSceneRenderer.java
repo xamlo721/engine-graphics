@@ -74,13 +74,13 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 	 * требования к состоянию GPU и обязан вернуть его точно до начала следующего прохода
 	 * (см. {@link #init()}: blend SRC_ALPHA/ONE_MINUS_SRC_ALPHA, depth-test включён, func ALWAYS):
 	 * <ol>
-	 *   <li>{@code opaque-world} — объекты сцены, включая {@link ChunkMeshElement}, под LESS + mask(true);</li>
+	 *   <li>{@code opaque-world} — объекты сцены, включая {@link ChunkMeshElement}, под LESS + mask(true);
+	 *       элементы с зарегистрированным секционным ящиком проходят cull-volume ({@link #chunkInView});</li>
 	 *   <li>{@code gui} — z-циклы по виджетам/тексту в стейди-стейте init(), который world-pass восстанавливает.</li>
 	 * </ol>
-	 * При нуле чанков GL-состояние за кадр побайтово совпадает со старым поведением метода.
-	 * TODO: frustum-culling чанков по AABB добавить, когда IScene будет отдавать полный MVP
-	 *       (сейчас доступен только getProjectionMatrix()); визуальная приёмка pass-plan'а на
-	 *       реальных данных чанков — после появления сетевого подключения.
+	 * При нуле чанков GL-состояние за кадр всё равно побайтово совпадает со старым поведением метода
+	 * (culling не добавляет GPU-вызовов). Визуальная приёмка pass-plan'а на реальных данных чанков
+	 * остаётся за тестовой фазой; здесь culling уже активен для всех элементов с hasChunkBounds.
 	 */
 	@Override
 	public void renderScene(IScene scene) {
@@ -94,8 +94,9 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		// Проход "opaque-world": реальный depth-test только вокруг 3D-контента.
 		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.LESS);
 		glDepthMask(true);
+		Frustum cullVolume = scene.getViewFrustum();
 		for (AbstractSceneElement obj : scene.getRenderableObject()) {
-			if (obj instanceof ChunkMeshElement chunk) {
+			if (obj instanceof ChunkMeshElement chunk && chunkInView(chunk, cullVolume)) {
 				chunk.draw(scene);
 			}
 		}
@@ -113,22 +114,20 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 	}
 
 	/**
-	 * Culling чанка по его AABB: {@link ChunkMeshElement#registerChunkBox(int, int, int, int)}
-	 * хранит CORNER-BASED координату нижнего блока + размер, Frustum.cubeInFrustum ждёт
-	 * центр+half-size — переводим перед вызовом. Без MVP или без зарегистрированного ящика
-	 * каллинг не применяется и элемент рисуется как раньше. Для нечётного размера тестовый
-	 * ящик ужимается максимум на блок по оси; типовые 16-блочные чанки точны.
+	 * Culling секционного AABB чанка: {@code registerChunkBox} хранит corner-based min-угол
+	 * плюс axis-exact протяжённости SX/SY/SZ, тестируемый ящик [min, min+S] по каждой оси через
+	 * {@link Frustum#cubeIntoFrustum(float, float, float, float, float, float)} — пересечённый
+	 * тест: рисуем, пока хотя бы одна из восьми граней не оказалась целиком за любой плоскостью.
+	 * Элемент без зарегистрированного ящика или кадр без сохранённого world→clip преобразования
+	 * рисуются как раньше — culling деградирует в off (backward-compatible).
 	 */
 	private static boolean chunkInView(ChunkMeshElement chunk, Frustum frustum) {
 		if (frustum == null || !chunk.hasChunkBounds()) {
 			return true;
 		}
-		int size = chunk.getChunkSize();
-		return frustum.cubeInFrustum(
-				chunk.getChunkMinX() + size / 2,
-				chunk.getChunkMinY() + size / 2,
-				chunk.getChunkMinZ() + size / 2,
-				size / 2);
+		int minX = chunk.getChunkMinX(), minY = chunk.getChunkMinY(), minZ = chunk.getChunkMinZ();
+		return frustum.cubeIntoFrustum(minX, minY, minZ,
+				minX + chunk.getChunkSX(), minY + chunk.getChunkSY(), minZ + chunk.getChunkSZ());
 	}
 
 
