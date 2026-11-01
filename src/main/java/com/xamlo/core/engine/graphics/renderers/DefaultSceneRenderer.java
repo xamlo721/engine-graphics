@@ -24,6 +24,14 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 	private UIElementRenderer uiRenderer;
 	private TextElementRenderer textRenderer;
 	private SceneElementRenderer elementRenderer;
+
+	/**
+	 * Diagnostic counters for the opaque-world pass, refreshed once per rendered frame: how many
+	 * {@link ChunkMeshElement} instances were drawn versus skipped by view-volume culling on that
+	 * exact frame (-1 until the first world pass has run). Read-only from any thread after init.
+	 */
+	public volatile int lastOpaqueWorldDrawn = -1;
+	public volatile int lastOpaqueWorldCulled = -1;
 	
 	public DefaultSceneRenderer(IResourceLoader<String> resourceLoader) {
 		this.uiRenderer = new UIElementRenderer();
@@ -95,11 +103,20 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.LESS);
 		glDepthMask(true);
 		Frustum cullVolume = scene.getViewFrustum();
+		int worldDrawn = 0;
+		int worldCulled = 0;
 		for (AbstractSceneElement obj : scene.getRenderableObject()) {
-			if (obj instanceof ChunkMeshElement chunk && chunkInView(chunk, cullVolume)) {
-				chunk.draw(scene);
+			if (obj instanceof ChunkMeshElement chunk) {
+				if (chunkInView(chunk, cullVolume)) {
+					chunk.draw(scene);
+					worldDrawn++;
+				} else {
+					worldCulled++;
+				}
 			}
 		}
+		lastOpaqueWorldDrawn = worldDrawn;
+		lastOpaqueWorldCulled = worldCulled;
 		// Точный возврат стейди-стейта init() до отрисовки GUI.
 		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
 		glDepthMask(true);
