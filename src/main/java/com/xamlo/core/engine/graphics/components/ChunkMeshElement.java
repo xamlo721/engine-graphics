@@ -77,9 +77,14 @@ public class ChunkMeshElement extends AbstractSceneElement {
     private final IShaderResource<String> vertexSource;
     private final IShaderResource<String> fragmentSource;
 
-    /** Компилируются лениво на рендер-потоке (см. ensureGl()). */
-    private ShaderProgram colorProgram;
-    private ShaderProgram textureProgram;
+    /**
+     * Программы ОБЩИЕ на все элементы: компилируются один раз на контекст. Раньше каждая часть чанка (их тысячи)
+     * компилировала свою пару программ - это давало десятки тысяч GL-программ и заметный старт, а также мешало
+     * батчингу (у каждого элемента был свой program object). Источники у всех одинаковые, поэтому кэш корректен.
+     */
+    private static ShaderProgram sharedColorProgram;
+    private static ShaderProgram sharedTextureProgram;
+    private static boolean sharedProgramsReady;
     private boolean glInitialized;
     private boolean released;
 
@@ -149,14 +154,9 @@ public class ChunkMeshElement extends AbstractSceneElement {
         }
         vertexFloats = -1;
         indexCount = -1;
-        if (colorProgram != null) {
-            colorProgram.cleanup();
-            colorProgram = null;
-        }
-        if (textureProgram != null) {
-            textureProgram.cleanup();
-            textureProgram = null;
-        }
+        // Общие программы НЕ удаляются здесь: они живут на весь контекст и переиспользуются всеми элементами.
+        // (историческое поле textureProgram больше не является владением элемента)
+
     }
 
     /** Привязывает движок ради очереди задач рендер-потока. Вызывать один раз после Engine.init(). */
@@ -405,7 +405,7 @@ public class ChunkMeshElement extends AbstractSceneElement {
     /** Полная настройка GL под этот элемент: программа + юниформы + VAO (+текстура). Рендер-поток. */
     public void bind() {
         ensureGl();
-        ShaderProgram program = texture != null ? textureProgram : colorProgram;
+        ShaderProgram program = currentProgram();
         program.bind();
         program.setUniform("modelMatrix", modelMatrix);
         program.setUniform("uFogColor", fogColorVec);
@@ -425,8 +425,56 @@ public class ChunkMeshElement extends AbstractSceneElement {
             return;
         }
         glBindVertexArray(0);
-        ShaderProgram program = texture != null ? textureProgram : colorProgram;
+        ShaderProgram program = currentProgram();
         program.unbind();
+    }
+
+    /**
+     * Батч-путь: вызывающий УЖЕ забиндил эту программу и текстуру этого элемента (и выставил
+     * frame-константы вроде сэмплера). Здесь только реально по-элементное состояние: fog, modelMatrix,
+     * VAO и сам draw. Нужен, чтобы проход мог сгруппировать элементы по программе/текстуре и не
+     * платить glUseProgram/glBindTexture на каждом.
+     */
+    public void drawBatched(IScene scene) {
+        ensureGl();
+        Matrix4f mvp = scene == null ? null : scene.getProjectionMatrix();
+        if (mvp == null || vertexFloats < 0) {
+            return;
+        }
+        ShaderProgram program = currentProgram();
+        program.setUniform("projectionMatrix", mvp);
+        program.setUniform("uFogColor", fogColorVec);
+        program.setUniform("uFogFar", fogFarDistance);
+        program.setUniform("uFogCenter", fogCenter);
+        program.setUniform("modelMatrix", modelMatrix);
+        glBindVertexArray(vaoId);
+        if (indexCount > 0) {
+            glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0L);
+        } else {
+            glDrawArrays(GL_TRIANGLES, 0, vertexFloats / FLOATS_PER_VERTEX);
+        }
+        glBindVertexArray(0);
+    }
+
+    /** Bind-половина батч-пути: программа элемента + его текстура (сэмплер выставляется один раз на программу). */
+    public void bindProgramAndTexture() {
+        ensureGl();
+        ShaderProgram program = currentProgram();
+        program.bind();
+        if (texture != null) {
+            glActiveTexture(GL_TEXTURE0);
+            texture.bind();
+            program.setUniform("texture_sampler", 0);
+        }
+    }
+
+    /** Unbind после завершения батч-группы (не на каждом элементе - иначе теряется весь выигрыш). */
+    public void unbindBatch() {
+        if (!glInitialized) {
+            return;
+        }
+        glBindVertexArray(0);
+        currentProgram().unbind();
     }
 
     /**
@@ -454,7 +502,7 @@ public class ChunkMeshElement extends AbstractSceneElement {
     // ------------------------------------------------------------------ внутреннее
 
     private ShaderProgram currentProgram() {
-        return texture != null ? textureProgram : colorProgram;
+        return texture != null ? sharedTextureProgram : sharedColorProgram;
     }
 
     /** Переопределение: отдаём активную программу элемента вместо примитивной базовой. */
@@ -468,26 +516,36 @@ public class ChunkMeshElement extends AbstractSceneElement {
         if (glInitialized || released) {
             return;
         }
+        ensureSharedPrograms(this.vertexSource, this.fragmentSource);
+        vaoId = glGenVertexArrays();
+        glInitialized = true;
+    }
+
+    private static synchronized void ensureSharedPrograms(IShaderResource<String> vertexSource, IShaderResource<String> fragmentSource) {
+        if (sharedProgramsReady) {
+            return;
+        }
         String vsText = vertexSource.getShaderProgram();
         String fsColor = fragmentSource.getShaderProgram();
         String fsTextured = enableTextureDefine(fsColor);
 
-        colorProgram = new ShaderProgram();
-        colorProgram.addVertexShader(vsText);
-        colorProgram.addFragmentShader(fsColor);
-        colorProgram.compileShader();
-        registerUniform(colorProgram, "projectionMatrix", "modelMatrix",
+        ShaderProgram color = new ShaderProgram();
+        color.addVertexShader(vsText);
+        color.addFragmentShader(fsColor);
+        color.compileShader();
+        registerUniform(color, "projectionMatrix", "modelMatrix",
                 "uFogColor", "uFogFar", "uFogCenter");
 
-        textureProgram = new ShaderProgram();
-        textureProgram.addVertexShader(vsText);
-        textureProgram.addFragmentShader(fsTextured);
-        textureProgram.compileShader();
-        registerUniform(textureProgram, "projectionMatrix", "modelMatrix",
+        ShaderProgram texture = new ShaderProgram();
+        texture.addVertexShader(vsText);
+        texture.addFragmentShader(fsTextured);
+        texture.compileShader();
+        registerUniform(texture, "projectionMatrix", "modelMatrix",
                 "texture_sampler", "uFogColor", "uFogFar", "uFogCenter");
 
-        vaoId = glGenVertexArrays();
-        glInitialized = true;
+        sharedColorProgram = color;
+        sharedTextureProgram = texture;
+        sharedProgramsReady = true;
     }
 
     /** Вставляет #define USE_TEXTURE сразу после строки #version (она обязана быть первой в GLSL). */
@@ -499,7 +557,7 @@ public class ChunkMeshElement extends AbstractSceneElement {
         return glsl.substring(0, newline + 1) + "#define USE_TEXTURE\n" + glsl.substring(newline + 1);
     }
 
-    private void registerUniform(ShaderProgram program, String... names) {
+    private static void registerUniform(ShaderProgram program, String... names) {
         for (String name : names) {
             try {
                 program.createUniform(name);
