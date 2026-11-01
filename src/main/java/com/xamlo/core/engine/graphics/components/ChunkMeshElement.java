@@ -92,6 +92,8 @@ public class ChunkMeshElement extends AbstractSceneElement {
     volatile Matrix4f modelMatrix = new Matrix4f();
 
     private Texture texture;
+    /** See {@link #setTranslucent(boolean)}: drawn in the after-opaque blended pass with depth writes off. */
+    private boolean translucent = false;
 
     // Fog uniforms, читается рендер-потоком при draw()
     private volatile float fogFarDistance;
@@ -307,6 +309,20 @@ public class ChunkMeshElement extends AbstractSceneElement {
 
     public Texture getTexture() {
         return texture;
+    }
+
+    /**
+     * Полупрозрачный материал: элемент рисуется отдельным проходом ПОСЛЕ сплошной геометрии,
+     * с включённым блендингом и ВЫКЛЮЧЕННОЙ записью глубины (порядок внутри прохода не
+     * сортируется — для водоёмов этого достаточно, глубина пишется только сплошным проходом).
+     * Флаг не привязан к конкретной игре: это свойство материала, а не движка.
+     */
+    public void setTranslucent(boolean translucent) {
+        this.translucent = translucent;
+    }
+
+    public boolean isTranslucent() {
+        return translucent;
     }
 
     /** Цвет тумана RGB (альфа игнорируется шейдером). */

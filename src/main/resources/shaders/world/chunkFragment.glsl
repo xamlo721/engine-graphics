@@ -25,7 +25,9 @@ void main() {
 	}
 	// Textured quads still modulate by the baked per-face color: this carries face brightness and runtime tints
 	// (e.g. vanilla foliage colormap) exactly like legacy fixed-function multiply-blending did.
-	base = vec4(texSampled.rgb * vColor.rgb, 1.0) * vColor.a;
+	// Alpha passes through instead of being forced to 1: blended materials (water) need their sheet alpha, while cutout
+	// art stays effectively opaque because every surviving pixel already passed the 0.5 alpha test above.
+	base = vec4(texSampled.rgb * vColor.rgb, texSampled.a) * vColor.a;
 #else
 	base = vColor;
 #endif

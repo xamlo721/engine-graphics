@@ -93,6 +93,12 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 	@Override
 	public void renderScene(IScene scene) {
 
+		// Steady-state contract from init(), re-established EVERY frame: the GUI renderer disables GL_BLEND at the end of
+		// each element draw, so from the second frame on the 3D passes used to run with blending off - alpha of blended
+		// materials was silently ignored (water looked opaque from above). Passes must declare their own state, not inherit it.
+		OpenGLBlend.enable();
+		OpenGLBlend.setMode(EnumOpenglBlendMode.SRC_ALPHA, EnumOpenglBlendMode.ONE_MINUS_SRC_ALPHA);
+
 		for (AbstractSceneElement obj : scene.getRenderableObject()) {
 			if (!(obj instanceof ChunkMeshElement)) {
 				elementRenderer.draw(obj, scene);
@@ -107,6 +113,9 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		int worldCulled = 0;
 		for (AbstractSceneElement obj : scene.getRenderableObject()) {
 			if (obj instanceof ChunkMeshElement chunk) {
+				if (chunk.isTranslucent()) {
+					continue; // полупрозрачные материалы идут отдельным проходом ниже
+				}
 				if (chunkInView(chunk, cullVolume)) {
 					chunk.draw(scene);
 					worldDrawn++;
@@ -117,9 +126,21 @@ public class DefaultSceneRenderer implements ISceneRenderer {
 		}
 		lastOpaqueWorldDrawn = worldDrawn;
 		lastOpaqueWorldCulled = worldCulled;
+
+		// Проход "translucent-world": блендинг уже включён стейди-стейтом init()
+		// (SRC_ALPHA/ONE_MINUS_SRC_ALPHA), глубина тестируется, но НЕ пишется — иначе
+		// блики/вода перекрывали бы геометрию за собой и порядок проходов не спасал бы.
+		glDepthMask(false);
+		for (AbstractSceneElement obj : scene.getRenderableObject()) {
+			if (obj instanceof ChunkMeshElement chunk && chunk.isTranslucent()) {
+				if (chunkInView(chunk, cullVolume)) {
+					chunk.draw(scene);
+				}
+			}
+		}
+		glDepthMask(true);
 		// Точный возврат стейди-стейта init() до отрисовки GUI.
 		OpenGLDepth.setDepthMode(EnumOpenGLDepthMode.ALWAYS);
-		glDepthMask(true);
 
 		// Отрисовка в z-порядке: элементы с большим индексом слоя поверх остальных,
 		// при равных — в порядке дерева.
