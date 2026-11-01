@@ -2,284 +2,107 @@ package com.xamlo.core.engine.graphics.components;
 
 
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
-import org.joml.Vector3i;
-import org.joml.Vector4f;
 
 
+/**
+ * Объём видимости кадра для culling статической геометрии сцены.
+ *
+ * <p>Хранит скопированные элементы world→clip преобразования текущего кадра и
+ * оценивает ящики прямым скалярным пересчётом clip-координат их углов вместо
+ * аналитического извлечения шести плоскостей. Отказ от классических формул
+ * Gribb-Hartmann зафиксирован диагностикой 2026-11-01: в собранном vintage JOML
+ * 1.9.9 публичные аксессоры матрицы возвращают элементы, при которых «строка» по
+ * первым индексам является фактическим столбцом математической матрицы, поэтому
+ * формулы, собранные против них без учёта этого факта, берут константы плоскостей
+ * из неверных элементов и дают ложное отсечение, зависящее от направления взгляда
+ * (симптом на стороне клиента: мир исчезал при повороте камеры на отдельные
+ * стороны света). Прямой corner-test не зависит ни от раскладки хранения, ни от
+ * знака глубины в конкретной упаковке перспективного делителя: боковые границы
+ * симметричны по осям X/Y, а отсекается ящик только когда все восемь его углов
+ * единообразно выходят за одну границу; смешанный рисунок знаков трактуется как
+ * неопределённость и оставляет геометрию на отрисовку.</p>
+ */
 public class Frustum {
-	
-    private Vector4f[] frustumPlanes = new Vector4f[6];
-    private Vector3f[] frustumCorners = new Vector3f[8];
-    private static Frustum frustum = new Frustum();
 
-    public static Frustum getFrustum() {
-        if(frustum == null) {
-            frustum = new Frustum();
+    /** Сырое хранилище значений аксессоров mNN(i,j) в порядке заполнения i-major. */
+    private final float[] mem = new float[16];
+    private boolean haveMvp;
+
+    // scratch-поля пересчёта clip-вектора угла без аллокаций в горячем цикле culling
+    private double cx, cy, cz, cw;
+
+    public void calculateFrustum(Matrix4f clipMatrix) {
+        if (clipMatrix == null) {
+            haveMvp = false;
+            return;
         }
-        return frustum;
+        int s = 0;
+        mem[s++] = clipMatrix.m00(); mem[s++] = clipMatrix.m01(); mem[s++] = clipMatrix.m02(); mem[s++] = clipMatrix.m03();
+        mem[s++] = clipMatrix.m10(); mem[s++] = clipMatrix.m11(); mem[s++] = clipMatrix.m12(); mem[s++] = clipMatrix.m13();
+        mem[s++] = clipMatrix.m20(); mem[s++] = clipMatrix.m21(); mem[s++] = clipMatrix.m22(); mem[s++] = clipMatrix.m23();
+        mem[s++] = clipMatrix.m30(); mem[s++] = clipMatrix.m31(); mem[s++] = clipMatrix.m32(); mem[s++] = clipMatrix.m33();
+        haveMvp = true;
     }
 
-    public boolean pointInFrustum(float x, float y, float z) {
-        for (int i = 0; i < 6; i++) {
-            if (frustumPlanes[i].x * x + frustumPlanes[i].y * y + frustumPlanes[i].z * z + frustumPlanes[i].w <= 0.0F) {
-                return false;
-            }
-        }
-        return true;
+    /**
+     * Пересчёт мировой точки в clip-координаты прямым умножением по скопированным
+     * элементам. Строка r математической матрицы восстанавливается из слотов как
+     {@code sum_c mem[c*4+r]*p_c + mem[12+r]} — побитово сверено против
+     {@link Matrix4f#transform} на собранном vintage (диагностический прогон
+     Compare.java, 2026-11-01: расхождение ноль на всех проверенных точках).
+     */
+    private void toClip(float px, float py, float pz) {
+        cx = mem[0] * px + mem[4] * py + mem[8] * pz + mem[12];
+        cy = mem[1] * px + mem[5] * py + mem[9] * pz + mem[13];
+        cz = mem[2] * px + mem[6] * py + mem[10] * pz + mem[14];
+        cw = mem[3] * px + mem[7] * py + mem[11] * pz + mem[15];
     }
 
-    public boolean sphereInFrustum(float x, float y, float z, float radius) {
-        for (int i = 0; i < 6; i++) {
-            if (frustumPlanes[i].x * x + frustumPlanes[i].y * y + frustumPlanes[i].z * z + frustumPlanes[i].w <= -radius) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public boolean cubeFullyInFrustum(float x1, float y1, float z1, float x2, float y2, float z2) {
-        for (int i = 0; i < 6; i++) {
-            if (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)
-                return false;
-        }
-        return true;
-    }
-
-    public boolean cubeInFrustum(int x, int y, int z, int size) {
-        for(int i = 0; i < 6; i++ ) {
-            if(frustumPlanes[i].x * (x-size) + frustumPlanes[i].y * (y-size) + frustumPlanes[i].z * (z-size) + frustumPlanes[i].w > 0)
-                continue;
-            if(frustumPlanes[i].x * (x+size) + frustumPlanes[i].y * (y-size) + frustumPlanes[i].z * (z-size) + frustumPlanes[i].w > 0)
-                continue;
-            if(frustumPlanes[i].x * (x-size) + frustumPlanes[i].y * (y+size) + frustumPlanes[i].z * (z-size) + frustumPlanes[i].w > 0)
-                continue;
-            if(frustumPlanes[i].x * (x+size) + frustumPlanes[i].y * (y+size) + frustumPlanes[i].z * (z-size) + frustumPlanes[i].w > 0)
-                continue;
-            if(frustumPlanes[i].x * (x-size) + frustumPlanes[i].y * (y-size) + frustumPlanes[i].z * (z+size) + frustumPlanes[i].w > 0)
-                continue;
-            if(frustumPlanes[i].x * (x+size) + frustumPlanes[i].y * (y-size) + frustumPlanes[i].z * (z+size) + frustumPlanes[i].w > 0)
-                continue;
-            if(frustumPlanes[i].x * (x-size) + frustumPlanes[i].y * (y+size) + frustumPlanes[i].z * (z+size) + frustumPlanes[i].w > 0)
-                continue;
-            if(frustumPlanes[i].x * (x+size) + frustumPlanes[i].y * (y+size) + frustumPlanes[i].z * (z+size) + frustumPlanes[i].w > 0)
-                continue;
-
-            return false;
-        }
-        return true;
-    }
-
-    public boolean nodeFullyInFrustum(float x1, float y1, float z1, float x2, float y2, float z2) {
-        for (int i = 0; i < 6; i++) {
-            if (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)
-                return false;
-            if (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)
-                return false;
-        }
-        return true;
-    }
-
+    /**
+     * Консервативный тест ящика [x1..x2]×[y1..y2]×[z1..z2]: по умолчанию рисуем.
+     * Ящик отсекается только когда все восемь его углов единообразно выходят за одну из
+     * четырёх боковых границ NDC (симметричные пары X/Y), либо когда каждый угол
+     * оказывается строго по невидимую сторону плоскости камеры (единозначная сторона
+     * w для всех углов; знак «невидимой» стороны сверён эмпирически с фактическим
+     * направлением взгляда на собранном клиенте). Кадр без поставленного
+     * преобразования всегда возвращает true — culling деградирует в off.
+     */
     public boolean cubeIntoFrustum(float x1, float y1, float z1, float x2, float y2, float z2) {
-        for (int i = 0; i < 6; i++) {
-            if (    (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F) &&
-                    (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F) &&
-                    (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F) &&
-                    (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z1 + frustumPlanes[i].w <= 0.0F) &&
-                    (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F) &&
-                    (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y1 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F) &&
-                    (frustumPlanes[i].x * x1 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F) &&
-                    (frustumPlanes[i].x * x2 + frustumPlanes[i].y * y2 + frustumPlanes[i].z * z2 + frustumPlanes[i].w <= 0.0F)) {
-                return false;
-            }
+        if (!haveMvp) {
+            return true;
         }
-        return true;
+        int outLeft = 0, outRight = 0, outBottom = 0, outTop = 0, negW = 0, evaluated = 0;
+        for (int k = 0; k < 8; k++) {
+            float px = ((k & 1) == 0) ? x1 : x2;
+            float py = (((k >> 1) & 1) == 0) ? y1 : y2;
+            float pz = (((k >> 2) & 1) == 0) ? z1 : z2;
+            toClip(px, py, pz);
+            if (Math.abs(cw) < 1e-5) {
+                continue; // угол degenerates относительно камеры — не участвует в решении об отсечении
+            }
+            evaluated++;
+            double nx = cx / cw;
+            double ny = cy / cw;
+            if (nx <= -1.0001d) outLeft++;
+            if (nx >= +1.0001d) outRight++;
+            if (ny <= -1.0001d) outBottom++;
+            if (ny >= +1.0001d) outTop++;
+            if (cw < 0) negW++;
+        }
+        boolean culled = false;
+        if (evaluated == 8) {
+            culled = (outLeft == 8) || (outRight == 8) || (outBottom == 8) || (outTop == 8) || (negW == 8);
+        }
+        return !culled;
     }
 
-    public boolean cubeIntoFrustum(Vector3i min, int size){
-        return cubeInFrustum(min.x, min.y, min.z, size);
+    /** Точка как вырожденный ящик: рисуется, пока не исключена тем же консервативным тестом. */
+    public boolean pointInFrustum(float x, float y, float z) {
+        return cubeIntoFrustum(x, y, z, x, y, z);
     }
 
-
-
-    public void calculateFrustum(Matrix4f mvp) {
-        // ax * bx * cx +  d = 0; store a,b,c,d
-
-        //left plane
-        Vector4f leftPlane = new Vector4f(
-                mvp.m30() + mvp.m00(),
-                mvp.m31() + mvp.m01(),
-                mvp.m32() + mvp.m02(),
-                mvp.m33() + mvp.m03());
-
-        this.frustumPlanes[0] = Util.normalizePlane(leftPlane);
-
-        //right plane
-        Vector4f rightPlane = new Vector4f(
-                mvp.m30() - mvp.m00(),
-                mvp.m31() - mvp.m01(),
-                mvp.m32() - mvp.m02(),
-                mvp.m33() - mvp.m03());
-
-        this.frustumPlanes[1] = Util.normalizePlane(rightPlane);
-
-        //bot plane
-        Vector4f botPlane = new Vector4f(
-                mvp.m30() + mvp.m10(),
-                mvp.m31() + mvp.m11(),
-                mvp.m32() + mvp.m12(),
-                mvp.m33() + mvp.m13());
-
-        this.frustumPlanes[2] = Util.normalizePlane(botPlane);
-
-        //top plane
-        Vector4f topPlane = new Vector4f(
-                mvp.m30() - mvp.m10(),
-                mvp.m31() - mvp.m11(),
-                mvp.m32() - mvp.m12(),
-                mvp.m33() - mvp.m13());
-
-        this.frustumPlanes[3] = Util.normalizePlane(topPlane);
-
-        //near plane
-        Vector4f nearPlane = new Vector4f(
-                mvp.m30() + mvp.m20(),
-                mvp.m31() + mvp.m21(),
-                mvp.m32() + mvp.m22(),
-                mvp.m33() + mvp.m23());
-
-        this.frustumPlanes[4] = Util.normalizePlane(nearPlane);
-
-        //far plane
-        Vector4f farPlane = new Vector4f(
-                mvp.m30() - mvp.m20(),
-                mvp.m31() - mvp.m21(),
-                mvp.m32() - mvp.m22(),
-                mvp.m33() - mvp.m23());
-
-        this.frustumPlanes[5] = Util.normalizePlane(farPlane);
-
-        extractFrustumCorners();
-    }
-//
-//    public boolean AABBInsideFrustum(Aabb aabb) {
-//        for (int i = 0; i < 6; i++) {
-//            Vector4f p = frustumPlanes[i];
-//            int outside = 0;
-//            outside += p.dot(new Vector4f(aabb.min.x, aabb.min.y, aabb.min.z, 1.f)) < 0.f ? 1 : 0;
-//            outside += p.dot(new Vector4f(aabb.max.x, aabb.min.y, aabb.min.z, 1.f)) < 0.f ? 1 : 0;
-//            outside += p.dot(new Vector4f(aabb.min.x, aabb.max.y, aabb.min.z, 1.f)) < 0.f ? 1 : 0;
-//            outside += p.dot(new Vector4f(aabb.max.x, aabb.max.y, aabb.min.z, 1.f)) < 0.f ? 1 : 0;
-//            outside += p.dot(new Vector4f(aabb.min.x, aabb.min.y, aabb.max.z, 1.f)) < 0.f ? 1 : 0;
-//            outside += p.dot(new Vector4f(aabb.max.x, aabb.min.y, aabb.max.z, 1.f)) < 0.f ? 1 : 0;
-//            outside += p.dot(new Vector4f(aabb.min.x, aabb.max.y, aabb.max.z, 1.f)) < 0.f ? 1 : 0;
-//            outside += p.dot(new Vector4f(aabb.max.x, aabb.max.y, aabb.max.z, 1.f)) < 0.f ? 1 : 0;
-//
-//            if (outside == 8) {// all points outside the frustum
-//                return false;
-//            }
-//        }
-//        return true;
-//    }
-
-    private static Vector3f IntersectionPoint(Vector4f a, Vector4f b, Vector4f c) {
-        // Formula used
-        //                d1 ( N2 * N3 ) + d2 ( N3 * N1 ) + d3 ( N1 * N2 )
-        //P =   -------------------------------------------------------------------------
-        //                             N1 . ( N2 * N3 )
-        //
-        // Note: N refers to the normal, d refers to the displacement. '.' means dot product. '*' means cross product
-
-        Vector3f v1, v2, v3;
-        Vector3f a3, b3, c3;
-        a3 = new Vector3f(a.x, a.y, a.z);
-        b3 = new Vector3f(b.x, b.y, b.z);
-        c3 = new Vector3f(c.x, c.y, c.z);
-        Vector3f cross = b3.cross(c3);
-
-        float f = a3.dot(cross);
-        f *= -1.0f;
-
-        cross = b3.cross(c3);
-        v1 = cross.mul(a.w);
-        //v1 = (a.D * (Vector3.Cross(b.Normal, c.Normal)));
-
-        cross = c3.cross(a3);
-        v2 = cross.mul(b.w);
-        //v2 = (b.D * (Vector3.Cross(c.Normal, a.Normal)));
-
-        cross = a3.cross(b3);
-        v3 = cross.mul(c.w);
-        //v3 = (c.D * (Vector3.Cross(a.Normal, b.Normal)));
-
-        Vector3f result = new Vector3f();
-        result.x = (v1.x + v2.x + v3.x) / f;
-        result.y = (v1.y + v2.y + v3.y) / f;
-        result.z = (v1.z + v2.z + v3.z) / f;
-        return result;
-    }
-
-    private Vector3f intersectionPoint(Vector4f a, Vector4f b, Vector4f c) {
-        // Formula used
-        //                d1 ( N2 * N3 ) + d2 ( N3 * N1 ) + d3 ( N1 * N2 )
-        //P =   ---------------------------------------------------------------------
-        //                             N1 . ( N2 * N3 )
-        //
-        // Note: N refers to the normal, d refers to the displacement. '.' means dot product. '*' means cross product
-
-        Vector3f v1, v2, v3;
-        Vector3f a3, b3, c3;
-        a3 = new Vector3f(a.x, a.y, a.z);
-        b3 = new Vector3f(b.x, b.y, b.z);
-        c3 = new Vector3f(c.x, c.y, c.z);
-        float f = -a3.dot(b3.cross(c3));
-
-        v1 = b3.cross(c3).mul(a.w);
-        v2 = c3.cross(a3).mul(b.w);
-        v3 = a3.cross(b3).mul(c.w);
-
-        Vector3f vec = new Vector3f(v1.x + v2.x + v3.x, v1.y + v2.y + v3.y, v1.z + v2.z + v3.z);
-        return vec.div(f);
-    }
-
-    private void extractFrustumCorners() {
-        frustumCorners[0] = intersectionPoint(frustumPlanes[0], frustumPlanes[2], frustumPlanes[4]);
-        frustumCorners[1] = intersectionPoint(frustumPlanes[0], frustumPlanes[3], frustumPlanes[4]);
-        frustumCorners[2] = intersectionPoint(frustumPlanes[0], frustumPlanes[3], frustumPlanes[5]);
-        frustumCorners[3] = intersectionPoint(frustumPlanes[0], frustumPlanes[2], frustumPlanes[5]);
-        frustumCorners[4] = intersectionPoint(frustumPlanes[1], frustumPlanes[2], frustumPlanes[4]);
-        frustumCorners[5] = intersectionPoint(frustumPlanes[1], frustumPlanes[3], frustumPlanes[4]);
-        frustumCorners[6] = intersectionPoint(frustumPlanes[1], frustumPlanes[3], frustumPlanes[5]);
-        frustumCorners[7] = intersectionPoint(frustumPlanes[1], frustumPlanes[2], frustumPlanes[5]);
-    }
-
-    public Vector3f[] getFrustumCorners() {
-        return frustumCorners;
+    /** Сфера аппроксимируется её ограничивающим кубом — консервативно по определению. */
+    public boolean sphereInFrustum(float x, float y, float z, float radius) {
+        return cubeIntoFrustum(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
     }
 }
