@@ -130,8 +130,6 @@ public class UIElementRenderer {
 
         }
 
-        debugUIElement.getShader().setUniform("useTexture", texture != null);
-
         Vector4f bgColorVector;
         if (element instanceof IBackgroundSupport) {
             IColor bgColor = ((IBackgroundSupport)element).getBackgroundColor();
@@ -143,34 +141,32 @@ public class UIElementRenderer {
         } else {
             bgColorVector = new Vector4f(1, 1, 1, 1); // Белый по умолчанию
         }
-        debugUIElement.getShader().setUniform("backgroundColor", bgColorVector);
-        
+
+        Vector4f hoverColorVector;
+        float hoverIntensity;
         if (element instanceof IHoverable && ((IHoverable)element).isHovered()) {
-        	
-            Vector4f hoverColorVector;
             IColor hoverColor = ((IHoverable)element).getHoverColor();
-            if (hoverColor != null) {
-            	hoverColorVector = hoverColor.getColorVector();
-            } else {
-            	hoverColorVector = new Vector4f(0, 0, 0, 0);
-            }
-            
-            debugUIElement.getShader().setUniform("hoverColor", hoverColorVector);
-            debugUIElement.getShader().setUniform("hoverIntensity", 0.1f);
+            hoverColorVector = (hoverColor != null) ? hoverColor.getColorVector() : new Vector4f(0, 0, 0, 0);
+            hoverIntensity = 0.1f;
         } else {
-            debugUIElement.getShader().setUniform("hoverColor", new Vector4f(0, 0, 0, 0));
-            debugUIElement.getShader().setUniform("hoverIntensity", 0.0f);
+            hoverColorVector = new Vector4f(0, 0, 0, 0);
+            hoverIntensity = 0.0f;
         }
-        
+
         // Pressed state for push buttons mirrors the hover slot: tint with its own color when setPressed(true).
+        Vector4f pressedColorVector;
+        float pressedIntensity;
         if (element instanceof com.xamlo.core.engine.graphics.api.gui.elements.IPushButton pb && pb.isPressed()) {
             IColor pressedColorIface = pb.getButtonPressedColor();
-            debugUIElement.getShader().setUniform("pressedColor", pressedColorIface != null ? pressedColorIface.getColorVector() : new Vector4f(0, 0, 0, 0));
-            debugUIElement.getShader().setUniform("pressedIntensity", 0.35f);
+            pressedColorVector = (pressedColorIface != null) ? pressedColorIface.getColorVector() : new Vector4f(0, 0, 0, 0);
+            pressedIntensity = 0.35f;
         } else {
-            debugUIElement.getShader().setUniform("pressedColor", new Vector4f(0, 0, 0, 0));
-            debugUIElement.getShader().setUniform("pressedIntensity", 0.0f);
+            pressedColorVector = new Vector4f(0, 0, 0, 0);
+            pressedIntensity = 0.0f;
         }
+
+        GuiShaderState.applyBackground(debugUIElement.getShader(), texture != null, bgColorVector,
+                hoverColorVector, hoverIntensity, pressedColorVector, pressedIntensity);
         
 		debugUIElement.getMesh().bind();
 
@@ -245,6 +241,8 @@ public class UIElementRenderer {
                 debugUIElement.getShader().bind();
                 debugUIElement.getShader().setUniform("mvp", mvpMatrix);
                 debugUIElement.getShader().setUniform("useTexture", false);
+                debugUIElement.getShader().setUniform("useTextColor", false);
+                debugUIElement.getShader().setUniform("useTexAffine", false);
                 debugUIElement.getShader().setUniform("backgroundColor", fillColor.getColorVector());
 
                 glDrawElements(GL_TRIANGLES, debugUIElement.getMesh().getVertexCount(), GL_UNSIGNED_INT, 0);
@@ -298,6 +296,8 @@ public class UIElementRenderer {
         final float top = 0.0f;
 
         debugUIElement.getShader().setUniform("useTexture", false);
+        debugUIElement.getShader().setUniform("useTextColor", false);
+        debugUIElement.getShader().setUniform("useTexAffine", false);
         debugUIElement.getShader().setUniform("backgroundColor", color);
 
         for (FrameRects.Strip strip : strips) {
@@ -327,6 +327,8 @@ public class UIElementRenderer {
         }
 
         debugUIElement.getShader().setUniform("useTexture", false);
+        debugUIElement.getShader().setUniform("useTextColor", false);
+        debugUIElement.getShader().setUniform("useTexAffine", false);
         for (int i = 0; i < strips.size(); i++) {
             GradientStrips.Strip strip = strips.get(i);
             float t = (strip.count() > 1) ? (float) strip.index() / (strip.count() - 1f) : 0f;
