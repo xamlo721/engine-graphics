@@ -72,7 +72,9 @@ public class GlyphGenerator {
             x += width + MARGIN;
         }
         
-        saveBufferedImage(bufferedImage, "font_atlas_" + id + ".png");
+        if (Boolean.getBoolean("engine.fontDump")) {
+            saveBufferedImage(bufferedImage, "font_atlas_" + id + ".png");
+        }
         
         FontTexture texture = new FontTexture(bufferedImage);
         GlyphPage glyph = new GlyphPage(texture, maxHeight, charData);
