@@ -1,6 +1,7 @@
 package com.xamlo.core.engine.graphics.api.components;
 
 import com.xamlo.core.engine.graphics.api.devices.IInputFrameProvider;
+import com.xamlo.core.engine.graphics.api.devices.IWindow;
 import com.xamlo.core.engine.graphics.threads.RenderTaskQueue;
 
 public interface IRenderEngine {
@@ -40,6 +41,9 @@ public interface IRenderEngine {
 
 	/** Запрошено ли закрытие окна пользователем (false до создания окна). */
 	public boolean isCloseRequested();
+
+	/** Созданное окно движка (null до createWindow). */
+	public IWindow getWindow();
 	
 	public void stop();
 	

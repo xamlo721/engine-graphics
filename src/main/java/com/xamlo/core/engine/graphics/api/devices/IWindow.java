@@ -8,6 +8,10 @@ public interface IWindow {
 	
 	public void setWindowTitle(String title);
 
+	public void setVsyncEnabled(boolean enabled);
+
+	public boolean isVsyncEnabled();
+
 	public void setWindowIcon(GLFWImage icon);
 
 	/*

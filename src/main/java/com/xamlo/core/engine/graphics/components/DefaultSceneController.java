@@ -69,6 +69,8 @@ import net.lenni0451.asmevents.event.EventTarget;
 public class DefaultSceneController implements ISceneController {
 
 	private ICamera camera;
+	/** When false the controller still routes keys/actions but never moves the camera (hosts that own the camera elsewhere). */
+	private boolean cameraControlEnabled = true;
 	@SuppressWarnings("unused")
 	private IMouse mouse;
 	@SuppressWarnings("unused")
@@ -352,6 +354,10 @@ public class DefaultSceneController implements ISceneController {
 			return;
 		}
 
+		if (!cameraControlEnabled) {
+			return;
+		}
+
 		for (EnumKeyboardButtons heldKey : event.getHeldKeys()) {
 			switch (heldKey) {
 				case KEY_W: camera.move(new Vector3f(0.0f, 0.0f, -movAmt)); break;
@@ -531,7 +537,7 @@ public class DefaultSceneController implements ISceneController {
 			return;
 		}
 
-		if (hudMouseButtonHeld && this.inHUDMode) {
+		if (cameraControlEnabled && hudMouseButtonHeld && this.inHUDMode) {
 			camera.rotate(new Vector3f( event.getDy() * movAmt * 10, event.getDx() * movAmt * 10, 0.0f));
 			return;
 		}
@@ -896,6 +902,18 @@ public class DefaultSceneController implements ISceneController {
 	@Override
 	public void setCamera(ICamera camera) {
 		this.camera = camera;
+	}
+
+	/**
+	 * Enables/disables the controller's built-in keyboard/mouse camera movement. Applications that drive the camera
+	 * from their own simulation (or a fixed viewpoint) disable it while keeping focus, tooltip and action routing.
+	 */
+	public void setCameraControlEnabled(boolean enabled) {
+		this.cameraControlEnabled = enabled;
+	}
+
+	public boolean isCameraControlEnabled() {
+		return cameraControlEnabled;
 	}
 
 	@Override

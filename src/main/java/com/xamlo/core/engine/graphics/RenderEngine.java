@@ -113,6 +113,11 @@ public class RenderEngine implements IRenderEngine {
 	public boolean isCloseRequested() {
 		return window != null && window.isCloseRequested();
 	}
+
+	@Override
+	public com.xamlo.core.engine.graphics.api.devices.IWindow getWindow() {
+		return window;
+	}
 	
 	public void setCamera(ICamera cam) {
 		this.camera = cam;
