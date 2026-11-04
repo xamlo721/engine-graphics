@@ -27,7 +27,12 @@ public final class RenderTaskQueue {
     public void drain() {
         Task task;
         while ((task = tasks.poll()) != null) {
-            task.run();
+            try {
+                task.run();
+            } catch (RuntimeException e) {
+                System.err.println("Render task failed: " + task.getClass().getName());
+                e.printStackTrace();
+            }
         }
     }
 
