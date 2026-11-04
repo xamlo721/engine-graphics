@@ -184,7 +184,7 @@ public class TextElementRenderer {
 			return;
 		}
         GlyphSet glyphSet = resolveGlyphSet(element);
- 	
+
  	    this.textShader = debugUIElement.getShader();
 	
 	    UIElementGeometry geometry = ((IResizable)element).getGeometry();
@@ -196,6 +196,8 @@ public class TextElementRenderer {
 	    // Активируем шейдер текста
 	    textShader.bind();
 		ClipBinder.apply(textShader, element);
+		// Text must never inherit the UV-affine state left by a textured widget background.
+		textShader.setUniform("useTexAffine", false);
 	    Vector4f bgColorVector;
 	    if (element instanceof IBackgroundSupport) {
 	        IColor bgColor = ((IBackgroundSupport)element).getBackgroundColor();
@@ -296,6 +298,8 @@ public class TextElementRenderer {
 
 	    textShader.bind();
 		ClipBinder.apply(textShader, element);
+		// Text must never inherit the UV-affine state left by a textured widget background.
+		textShader.setUniform("useTexAffine", false);
 
 	    Vector4f bgColorVector = new Vector4f(1, 1, 1, 1);
 	    if (element instanceof IBackgroundSupport) {
