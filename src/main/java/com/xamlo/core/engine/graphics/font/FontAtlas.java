@@ -65,16 +65,18 @@ public class FontAtlas implements IFontAtlas {
         IGlyphPage glyphPage = font.getGlyphPage(character);
         
         CharacterData characterData = glyphPage.getCharacterData(character);
+        int pageWidth = glyphPage.getTexture().getWidth();
+        int pageHeight = glyphPage.getTexture().getHeight();
 
         float x = characterData.getX();
         float y = characterData.getY();
         float w = characterData.getWidth();
         float h = characterData.getHeight();
         
-        float texX = characterData.getX() / (float) font.getImageSize();
-        float texY = characterData.getY() / (float) font.getImageSize();
-        float texW = w / (float) font.getImageSize();
-        float texH = h / (float) font.getImageSize();
+        float texX = characterData.getX() / (float) pageWidth;
+        float texY = characterData.getY() / (float) pageHeight;
+        float texW = w / (float) pageWidth;
+        float texH = h / (float) pageHeight;
         
     	IVertex v1 = new Vertex(5).append(new Vector3f( 0,  1,  0.0f)).append(new Vector2f(texX,        texY)); //V1
     	IVertex v2 = new Vertex(5).append(new Vector3f( 0,  0,  0.0f)).append(new Vector2f(texX,        texY + texH));        //V2
