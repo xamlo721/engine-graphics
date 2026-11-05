@@ -196,8 +196,6 @@ public class TextElementRenderer {
 	    // Активируем шейдер текста
 	    textShader.bind();
 		ClipBinder.apply(textShader, element);
-		// Text must never inherit the UV-affine state left by a textured widget background.
-		textShader.setUniform("useTexAffine", false);
 	    Vector4f bgColorVector;
 	    if (element instanceof IBackgroundSupport) {
 	        IColor bgColor = ((IBackgroundSupport)element).getBackgroundColor();
@@ -219,12 +217,7 @@ public class TextElementRenderer {
 	    }
 	    textColorVector = effectiveTextColor(element, textColorVector);
 
-	    textShader.setUniform("backgroundColor", bgColorVector);
-	    textShader.setUniform("useTexture", true);
-	    textShader.setUniform("hoverColor", bgColorVector);
-	    textShader.setUniform("hoverIntensity", 0.0f);
-	    textShader.setUniform("textColor", textColorVector);
-	    textShader.setUniform("useTextColor", true);
+	    GuiShaderState.applyText(textShader, bgColorVector, textColorVector);
 
 	    // Layout-pass: позиция текста вычисляется из выравнивания и padding'а элемента,
 	    // а не из магических смещений. Если выравнивание не задано — legacy-офсеты.
@@ -298,8 +291,6 @@ public class TextElementRenderer {
 
 	    textShader.bind();
 		ClipBinder.apply(textShader, element);
-		// Text must never inherit the UV-affine state left by a textured widget background.
-		textShader.setUniform("useTexAffine", false);
 
 	    Vector4f bgColorVector = new Vector4f(1, 1, 1, 1);
 	    if (element instanceof IBackgroundSupport) {
@@ -319,12 +310,7 @@ public class TextElementRenderer {
 	    // Выключенный элемент красится своим disabled-цветом вместо обычного цвета текста.
 	    baseTextColor = effectiveTextColor(element, baseTextColor);
 
-	    textShader.setUniform("backgroundColor", bgColorVector);
-	    textShader.setUniform("useTexture", true);
-	    textShader.setUniform("hoverColor", bgColorVector);
-	    textShader.setUniform("hoverIntensity", 0.0f);
-	    textShader.setUniform("textColor", baseTextColor);
-	    textShader.setUniform("useTextColor", true);
+	    GuiShaderState.applyText(textShader, bgColorVector, baseTextColor);
 
 	    EnumAlignment alignment = ((IResizable)element).getAlignment();
 	    int elementPadding = ((IResizable)element).getPadding();
